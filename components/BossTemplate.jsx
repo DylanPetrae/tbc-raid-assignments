@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./BossTemplate.module.css";
 
 // Shared boss-position template. Fed entirely by a per-boss data object
@@ -18,12 +18,74 @@ export default function BossTemplate({ boss }) {
   const [values, setValues] = useState({});
   const [week, setWeek] = useState("");
   const [exporting, setExporting] = useState(false);
+  // Autosave status surfaced to the user: "" (nothing), "restored" (loaded a
+  // previous fill on mount), or "saved" (the current fill is persisted).
+  const [saveStatus, setSaveStatus] = useState("");
+  // Snapshot of the fill before the last "Clear all", so it can be undone.
+  const [undoData, setUndoData] = useState(null);
+  // True if the boss image failed to load (e.g. asset not added yet).
+  const [imgError, setImgError] = useState(false);
   const frameRef = useRef(null);
+  const undoTimer = useRef(null);
+  // Gate the autosave effect so it doesn't clobber storage on the very first
+  // commit (before the load effect has had a chance to restore).
+  const hasMounted = useRef(false);
 
   const pinById = Object.fromEntries(boss.pins.map((p) => [p.id, p]));
+  const storageKey = `tbc-raid:roster:${boss.slug}`;
+  // CSS aspect-ratio string (e.g. "1672 / 941") from the boss's real image
+  // dimensions, used to size the missing-image fallback to the right shape.
+  const imageRatio =
+    boss.imageWidth && boss.imageHeight
+      ? `${boss.imageWidth} / ${boss.imageHeight}`
+      : undefined;
+
+  // Restore the last fill for this boss from localStorage on mount. Officers
+  // type ~13 names per week; a refresh or stray back-button must not wipe them.
+  // This deliberately sets state after mount (not via a useState initializer)
+  // so the server-rendered empty markup matches the first client render and
+  // we avoid a hydration mismatch — the one intended cascading render.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        const next = {};
+        boss.pins.forEach((p) => {
+          next[p.id] = saved[p.id] || "";
+        });
+        setValues(next);
+        setWeek(saved.week || "");
+        if (Object.values(next).some(Boolean) || saved.week) {
+          setSaveStatus("restored");
+        }
+      }
+    } catch {
+      // Corrupt/blocked storage — start clean rather than crash.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boss.slug]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Persist on every change. Skipped on the first commit (hasMounted gate) so
+  // the initial empty state can't overwrite a saved fill before it's restored.
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(getState()));
+    } catch {
+      // Storage full/blocked — JSON Save/Load remains the explicit backup path.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, week]);
 
   function setValue(id, val) {
     setValues((v) => ({ ...v, [id]: val }));
+    setSaveStatus("saved");
   }
 
   function getState() {
@@ -45,8 +107,32 @@ export default function BossTemplate({ boss }) {
   }
 
   function handleClear() {
-    if (window.confirm("Clear all names for a new week?")) applyState({});
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    const snapshot = getState();
+    const hadAnything = boss.pins.some((p) => values[p.id]) || week;
+    applyState({});
+    setSaveStatus("");
+    // Offer an undo instead of an up-front confirm — friendlier for the common
+    // "clear for a new week" case while still protecting an accidental wipe.
+    if (hadAnything) {
+      setUndoData(snapshot);
+      undoTimer.current = setTimeout(() => setUndoData(null), 8000);
+    }
   }
+
+  function handleUndo() {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    if (undoData) {
+      applyState(undoData);
+      setSaveStatus("saved");
+    }
+    setUndoData(null);
+  }
+
+  // Cancel a pending undo timer if the component unmounts.
+  useEffect(() => () => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+  }, []);
 
   function handleSave() {
     const state = getState();
@@ -73,6 +159,7 @@ export default function BossTemplate({ boss }) {
       reader.onload = (ev) => {
         try {
           applyState(JSON.parse(ev.target.result));
+          setSaveStatus("saved");
         } catch {
           window.alert("Could not read that file.");
         }
@@ -114,8 +201,25 @@ export default function BossTemplate({ boss }) {
             ref={frameRef}
             className={`${styles.mapFrame} ${exporting ? styles.exporting : ""}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={boss.image} alt={boss.imageAlt || `${boss.name} platform diagram`} />
+            {imgError ? (
+              <div
+                className={styles.imgFallback}
+                role="img"
+                aria-label={boss.imageAlt || `${boss.name} platform diagram`}
+                style={imageRatio ? { aspectRatio: imageRatio } : undefined}
+              >
+                Platform diagram couldn’t be loaded.
+                <br />
+                You can still fill in names below.
+              </div>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={boss.image}
+                alt={boss.imageAlt || `${boss.name} platform diagram`}
+                onError={() => setImgError(true)}
+              />
+            )}
 
             {boss.pins.map((pin) => (
               <div
@@ -126,16 +230,23 @@ export default function BossTemplate({ boss }) {
                 <span className={styles.tag} style={{ color: `var(--${pin.role}-role)` }}>
                   {pin.tag}
                 </span>
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={values[pin.id] || ""}
-                  onChange={(e) => setValue(pin.id, e.target.value)}
-                  style={{ color: `var(--${pin.role}-role)` }}
-                />
-                <span className={styles.nameDisplay} style={{ color: `var(--${pin.role}-role)` }}>
-                  {values[pin.id] || ""}
-                </span>
+                {/* labelOnly pins (e.g. the boss marker, the DPS stack) are
+                    map annotations with no player name — render just the tag. */}
+                {!pin.labelOnly && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      aria-label={`${pin.tag} — player name`}
+                      value={values[pin.id] || ""}
+                      onChange={(e) => setValue(pin.id, e.target.value)}
+                      style={{ color: `var(--${pin.role}-role)` }}
+                    />
+                    <span className={styles.nameDisplay} style={{ color: `var(--${pin.role}-role)` }}>
+                      {values[pin.id] || ""}
+                    </span>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -151,18 +262,29 @@ export default function BossTemplate({ boss }) {
                 id="weekLabel"
                 placeholder="e.g. June 23"
                 value={week}
-                onChange={(e) => setWeek(e.target.value)}
+                onChange={(e) => {
+                  setWeek(e.target.value);
+                  setSaveStatus("saved");
+                }}
               />
             </div>
             <div className={styles.btnRow}>
-              <button className={styles.primary} onClick={handleExport}>
-                Export as image
+              <button
+                className={styles.primary}
+                onClick={handleExport}
+                disabled={exporting}
+              >
+                {exporting ? "Exporting…" : "Export as image"}
               </button>
               <button onClick={handleSave}>Save roster</button>
               <button onClick={handleLoad}>Load roster</button>
               <button className={styles.danger} onClick={handleClear}>
                 Clear all
               </button>
+            </div>
+            <div className={styles.saveNote} aria-live="polite">
+              {saveStatus === "restored" && "Restored your last entries for this boss."}
+              {saveStatus === "saved" && "Auto-saved in this browser."}
             </div>
             <div className={styles.legend}>
               {boss.roles.map((r, i) => (
@@ -181,15 +303,18 @@ export default function BossTemplate({ boss }) {
                 <div className={styles.quadTitle}>{group.title}</div>
                 {group.pins.map((pinId) => {
                   const pin = pinById[pinId];
+                  const fieldId = `sidebar-${pinId}`;
                   return (
                     <div className={styles.roleRow} key={pinId}>
                       <span
                         className={styles.dot}
                         style={{ background: `var(--${pin.role}-role)` }}
                       />
-                      <label>{pin.sidebarLabel}</label>
+                      <label htmlFor={fieldId}>{pin.sidebarLabel}</label>
                       <input
+                        id={fieldId}
                         placeholder="Name"
+                        aria-label={`${group.title}: ${pin.sidebarLabel}`}
                         value={values[pinId] || ""}
                         onChange={(e) => setValue(pinId, e.target.value)}
                       />
@@ -201,6 +326,15 @@ export default function BossTemplate({ boss }) {
           </div>
         </div>
       </div>
+
+      {undoData && (
+        <div className={styles.toast} role="status">
+          <span>Cleared all names.</span>
+          <button type="button" className={styles.toastBtn} onClick={handleUndo}>
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

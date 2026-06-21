@@ -42,6 +42,15 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Visible keyboard focus on every interactive element (inputs define their own
+   focus styles). Modern browsers draw the outline following each element's
+   border-radius, so cards/buttons keep their rounded corners. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent-fel);
+  outline-offset: 2px;
+}
+
 button {
   font-family: Arial, sans-serif;
   font-size: 0.8rem;
@@ -53,11 +62,22 @@ button {
   background: var(--bg-panel-light);
   color: var(--text-main);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 button:hover {
   background: var(--accent-fel-dim);
   border-color: var(--accent-fel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 main {
@@ -91,11 +111,22 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-dim);
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
 }
 
 .site-nav a:hover {
   color: var(--accent-fel);
   text-decoration: none;
+}
+
+/* Current section (set by SiteNav via aria-current="page"). */
+.site-nav a[aria-current="page"] {
+  color: var(--accent-fel);
+  border-bottom-color: var(--accent-fel);
+}
+.site-nav .brand[aria-current="page"] {
+  border-bottom-color: transparent;
 }
 
 .page-h1 {
@@ -133,7 +164,7 @@ main {
   padding: 18px 16px;
   font-family: Arial, sans-serif;
   color: var(--text-main);
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .boss-card:hover {

@@ -36,7 +36,10 @@
 
 .mapFrame {
   position: relative;
-  width: 560px;
+  /* Stays 560px on laptops, scales up to 720px on large desktop monitors
+     (better readability — desktop-first), and shrinks to the viewport on
+     mobile. Pins are positioned in %, so any width just scales the whole map. */
+  width: min(clamp(560px, 42vw, 720px), calc(100vw - 32px));
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border-fel);
@@ -61,13 +64,14 @@
 
 .pin input {
   pointer-events: auto;
-  width: 78px;
-  height: 18px;
-  line-height: 18px;
+  touch-action: manipulation;
+  width: 84px;
+  height: 22px;
+  line-height: 22px;
   text-align: center;
   font-family: Arial, sans-serif;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   padding: 0 4px;
   margin: 0;
   border-radius: 4px;
@@ -92,13 +96,13 @@
 .nameDisplay {
   display: none;
   pointer-events: none;
-  width: 78px;
-  height: 18px;
-  line-height: 18px;
+  width: 84px;
+  height: 22px;
+  line-height: 22px;
   text-align: center;
   font-family: Arial, sans-serif;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   padding: 0 4px;
   margin: 0;
   border-radius: 4px;
@@ -119,7 +123,7 @@
 
 .pin .tag {
   font-family: Arial, sans-serif;
-  font-size: 7.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -170,6 +174,7 @@
 
 .roleRow input {
   flex: 1;
+  touch-action: manipulation;
   background: var(--bg-panel-light);
   border: 1px solid var(--border-fel);
   border-radius: 4px;
@@ -226,9 +231,84 @@
   color: #fff;
 }
 
-.legend {
+.btnRow button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.btnRow button:disabled:hover {
+  background: var(--accent-fel-dim);
+  border-color: var(--border-fel);
+  color: var(--text-main);
+}
+
+.saveNote {
+  min-height: 1.1em;
+  margin-top: 8px;
   font-family: Arial, sans-serif;
   font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* Shown if the boss image fails to load. The boss's real aspect ratio is set
+   inline from imageWidth/imageHeight; this 16/10 is just a neutral default for
+   bosses that don't declare dimensions, so the pin overlay still has somewhere
+   to sit. */
+.imgFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 24px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+}
+
+/* Undo toast after "Clear all". */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-fel-dim);
+  background: var(--bg-panel-light);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+  font-family: Arial, sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  animation: toastIn 0.18s ease-out;
+}
+.toastBtn {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.legend {
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
   color: var(--text-dim);
   line-height: 1.5;
   margin-top: 8px;
@@ -247,6 +327,7 @@
 }
 .weekRow input {
   flex: 1;
+  touch-action: manipulation;
   background: var(--bg-panel-light);
   border: 1px solid var(--border-fel);
   border-radius: 4px;
@@ -256,10 +337,6 @@
 }
 
 @media (max-width: 760px) {
-  .mapFrame {
-    width: 100%;
-    max-width: 560px;
-  }
   .layout {
     flex-direction: column;
     align-items: center;
@@ -267,5 +344,40 @@
   .sideCol {
     max-width: 560px;
     width: 100%;
+  }
+
+  /* The sidebar is the primary data-entry path on touch devices, so make its
+     inputs meet the 44px touch-target minimum and use a 16px font (which also
+     stops iOS from auto-zooming the page on focus). */
+  .roleRow input,
+  .weekRow input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .btnRow button {
+    min-height: 44px;
+  }
+
+  /* Bump the on-image pins up a notch further for legibility and easier
+     tapping on small screens (they stay compact enough not to overlap). */
+  .pin input,
+  .nameDisplay {
+    width: 92px;
+    height: 26px;
+    line-height: 26px;
+    font-size: 14px;
+  }
+  .pin .tag {
+    font-size: 11px;
+  }
+}
+
+/* On very narrow phones, pull the pin inputs back in so the innermost pins
+   (e.g. Vashj's x:13%) don't clip against the frame's clipped edges. */
+@media (max-width: 400px) {
+  .pin input,
+  .nameDisplay {
+    width: 72px;
+    font-size: 12.5px;
   }
 }

@@ -10,6 +10,8 @@ const vashj = {
   subtitle: "Coilfang Reservoir · Serpentshrine Cavern — fill in names, then export or save",
   image: "/images/ssc/lady-vashj.jpg",
   imageAlt: "Lady Vashj platform diagram",
+  imageWidth: 520,
+  imageHeight: 931,
 
   roles: [
     { key: "white", name: "White", desc: "Strider kiter (perimeter)" },

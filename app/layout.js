@@ -1,4 +1,4 @@
-import Link from "next/link";
+import SiteNav from "@/components/SiteNav";
 import "./globals.css";
 
 export const metadata = {
@@ -11,13 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <nav className="site-nav">
-          <Link href="/" className="brand">
-            TBC Raid Templates
-          </Link>
-          <Link href="/ssc">Serpentshrine Cavern</Link>
-          <Link href="/tk">Tempest Keep</Link>
-        </nav>
+        <SiteNav />
         <main>{children}</main>
       </body>
     </html>

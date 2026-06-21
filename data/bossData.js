@@ -1,7 +1,10 @@
 import ladyVashj from "./bosses/lady-vashj";
+import voidReaver from "./bosses/void-reaver";
 
-// Registry of fully-built boss templates, keyed by slug. Add an entry here
-// (and a matching ready: true in bosses.js) once a boss's data file exists.
+// Registry of fully-built boss templates, keyed by slug. Add an entry here once
+// a boss's data file exists — bosses.js derives each boss's `ready` state from
+// this registry, so no second edit is needed.
 export const bossDataBySlug = {
   "lady-vashj": ladyVashj,
+  "void-reaver": voidReaver,
 };
