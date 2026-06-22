@@ -43,7 +43,7 @@ const karathress = {
   ],
 
   // x/y are the TRUE positions detected from the user's annotated reference
-  // (fathom-lord-karathress-positions.png). The bottom group (tanks, council,
+  // (references/fathom-lord-karathress-positions.png). The bottom group (tanks, council,
   // melee) genuinely stacks in a small area, so each of those carries a
   // labelDx/labelDy that fans its LABEL out (with a dot + leader line marking
   // the real spot) to keep the cluster readable. The center square (ranged +
