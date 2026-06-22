@@ -45,7 +45,7 @@
   position: relative;
   /* Stays 560px on laptops, scales up to 720px on large desktop monitors
      (better readability — desktop-first), and shrinks to the viewport on
-     mobile. Pins are positioned in %, so any width just scales the whole map. */
+     mobile. Markers are positioned in %, so any width just scales the map. */
   width: min(clamp(560px, 42vw, 720px), calc(100vw - 32px));
   border-radius: 10px;
   overflow: hidden;
@@ -59,106 +59,7 @@
   height: auto;
 }
 
-/* ---- Desktop label layer (tag + name input + leader lines) ---------------- */
-/* Hidden under the mobile breakpoint and during a map+key capture; forced
-   visible during a names-on-map capture. Positioned absolutely over the frame. */
-.labelLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.pin {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  pointer-events: none;
-}
-
-/* SVG layer drawing leader lines from offset labels back to their true spot
-   (the marker). Sits above the image but below the pin labels. */
-.leaders {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.pin input {
-  pointer-events: auto;
-  touch-action: manipulation;
-  width: 84px;
-  height: 22px;
-  line-height: 22px;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 0 4px;
-  margin: 0;
-  border-radius: 4px;
-  border: 1.5px solid rgba(0, 0, 0, 0.55);
-  outline: none;
-  background: rgba(8, 10, 8, 0.82);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-  box-sizing: border-box;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.pin input::placeholder {
-  font-weight: 500;
-  opacity: 0.75;
-}
-.pin input:focus {
-  border-color: var(--accent-fel);
-  box-shadow: 0 0 0 2px rgba(95, 217, 122, 0.3);
-}
-
-.nameDisplay {
-  display: none;
-  pointer-events: none;
-  width: 84px;
-  height: 22px;
-  line-height: 22px;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 0 4px;
-  margin: 0;
-  border-radius: 4px;
-  border: 1.5px solid rgba(0, 0, 0, 0.55);
-  background: rgba(8, 10, 8, 0.82);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-  box-sizing: border-box;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.pin .tag {
-  font-family: Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-/* ---- Marker layer (always on; the only map content on mobile) ------------- */
+/* ---- Marker layer: the SINGLE on-map representation of a pin --------------- */
 .markerLayer {
   position: absolute;
   inset: 0;
@@ -192,6 +93,12 @@
 .marker:focus-visible {
   outline: 2px solid var(--accent-fel);
   outline-offset: 2px;
+}
+/* Hover is a desktop-only enhancement (touch has no hover). */
+@media (hover: hover) {
+  .marker:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
 }
 
 .markerDot {
@@ -231,6 +138,31 @@
   }
 }
 
+/* ---- Export-only name layer (names-on-map export mode) -------------------- */
+.exportNames {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+  z-index: 5;
+}
+.captureNames .exportNames {
+  display: block;
+}
+.exportName {
+  position: absolute;
+  transform: translate(-50%, 13px);
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(0, 0, 0, 0.55);
+  background: rgba(8, 10, 8, 0.82);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
 /* ---- Export capture modes ------------------------------------------------- */
 /* map+key: lay the map and the key out together and fill the gap with the page
    background so the PNG isn't transparent between them. */
@@ -248,31 +180,6 @@
 .captureMapKey.keyStacked {
   flex-direction: column;
   align-items: center;
-}
-.captureMapKey .labelLayer {
-  display: none;
-}
-.captureMapKey .markerLayer {
-  z-index: 2;
-}
-/* The export key supersedes any on-image overlay cards in this mode. */
-.captureMapKey .overlayCard {
-  display: none;
-}
-
-/* names-on-map: reveal the label layer (even on mobile, for the capture only)
-   with the input→display-span swap, and hide the keyed marker layer + key. */
-.captureNames .labelLayer {
-  display: block;
-}
-.captureNames .markerLayer {
-  display: none;
-}
-.captureNames input {
-  display: none;
-}
-.captureNames .nameDisplay {
-  display: block;
 }
 
 /* ---- Export key panel (shown only during a map+key capture) --------------- */
@@ -354,60 +261,6 @@
   font-weight: 500;
 }
 
-/* On-image assignment card (boss.overlays). Lives inside the export frame so it
-   is captured in the PNG; display-only, mirrors the sidebar values. Retained
-   for backward compatibility (the export key now covers the same need). */
-.overlayCard {
-  position: absolute;
-  z-index: 4;
-  pointer-events: none;
-  background: rgba(8, 12, 9, 0.85);
-  border: 1px solid var(--accent-fel-dim);
-  border-radius: 8px;
-  padding: 7px 10px 8px;
-  font-family: Arial, sans-serif;
-  min-width: 148px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-}
-.overlayTitle {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--accent-fel);
-  border-bottom: 1px solid var(--accent-fel-dim);
-  padding-bottom: 4px;
-  margin-bottom: 5px;
-}
-.overlayRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.65;
-}
-.overlayDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
-}
-.overlayLabel {
-  color: #cfe9d2;
-}
-.overlayName {
-  color: var(--text-main);
-  margin-left: auto;
-  padding-left: 14px;
-  white-space: nowrap;
-}
-.overlayEmpty {
-  color: var(--text-dim);
-  font-weight: 500;
-}
-
 .sideCol {
   flex: 1 1 360px;
   min-width: 320px;
@@ -431,6 +284,27 @@
   margin: 0 0 10px;
   border-bottom: 1px solid var(--border-fel);
   padding-bottom: 6px;
+}
+
+/* Roster panel header: title + collapse toggle, sharing one bottom border. */
+.rosterHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-fel);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+}
+.rosterHead h2 {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.collapseBtn {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  font-size: 0.7rem;
 }
 
 .roleRow {
@@ -688,12 +562,6 @@
     width: 100%;
   }
 
-  /* The text-label layer overlaps on narrow screens — the whole point of the
-     redesign. Hide it; the keyed markers + the panel carry the names here. */
-  .labelLayer {
-    display: none;
-  }
-
   /* The sidebar is the primary data-entry path on touch devices, so make its
      inputs meet the 44px touch-target minimum and use a 16px font (which also
      stops iOS from auto-zooming the page on focus). */
@@ -704,6 +572,9 @@
   }
   .btnRow button {
     min-height: 44px;
+  }
+  .collapseBtn {
+    min-height: 36px;
   }
   .panelBadge {
     min-width: 40px;
@@ -718,29 +589,6 @@
   }
   .markerBadge {
     font-size: 12px;
-  }
-
-  /* When a names-on-map export is forced visible on a phone, keep the inputs
-     legible. */
-  .pin input,
-  .nameDisplay {
-    width: 92px;
-    height: 26px;
-    line-height: 26px;
-    font-size: 14px;
-  }
-  .pin .tag {
-    font-size: 11px;
-  }
-}
-
-/* On very narrow phones, pull the (export-only) pin inputs back in so the
-   innermost pins don't clip against the frame's clipped edges. */
-@media (max-width: 400px) {
-  .pin input,
-  .nameDisplay {
-    width: 72px;
-    font-size: 12.5px;
   }
 }
 

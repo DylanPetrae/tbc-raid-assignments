@@ -80,6 +80,8 @@ export default function BossTemplate({ boss }) {
   // Preferred export composition: "mapkey" (clean markers + a key panel) or
   // "names" (names painted on the map). Persisted per browser like other prefs.
   const [exportMode, setExportMode] = useState("mapkey");
+  // Roster panel can be folded (mainly for mobile) to reveal the whole map.
+  const [rosterOpen, setRosterOpen] = useState(true);
   // Autosave status: "" (nothing), "restored" (loaded a previous fill on mount),
   // or "saved" (the current fill is persisted).
   const [saveStatus, setSaveStatus] = useState("");
@@ -403,75 +405,10 @@ export default function BossTemplate({ boss }) {
                 />
               )}
 
-              {/* DESKTOP LABEL LAYER — tag + name input + leader lines. Hidden
-                  under the mobile breakpoint (and during a map+key capture) via
-                  CSS; forced visible during a names capture. */}
-              <div className={styles.labelLayer} aria-hidden="false">
-                <svg
-                  className={styles.leaders}
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  {boss.pins.map((pin) => {
-                    if (pin.sidebarOnly) return null;
-                    const dx = pin.labelDx || 0;
-                    const dy = pin.labelDy || 0;
-                    // noLeader: offset the label but draw no connector (the line
-                    // would end behind the name box).
-                    if ((!dx && !dy) || pin.noLeader) return null;
-                    return (
-                      <line
-                        key={pin.id}
-                        x1={pin.x}
-                        y1={pin.y}
-                        x2={pin.x + dx}
-                        y2={pin.y + dy}
-                        stroke={roleColor(pin.role)}
-                        strokeWidth="1"
-                        vectorEffect="non-scaling-stroke"
-                        opacity="0.5"
-                      />
-                    );
-                  })}
-                </svg>
-
-                {boss.pins.map((pin) => {
-                  if (pin.sidebarOnly) return null;
-                  const dx = pin.labelDx || 0;
-                  const dy = pin.labelDy || 0;
-                  return (
-                    <div
-                      key={pin.id}
-                      className={styles.pin}
-                      style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%` }}
-                    >
-                      <span className={styles.tag} style={{ color: roleColor(pin.role) }}>
-                        <RoleIcon icon={pin.icon} />
-                        {pin.tag}
-                      </span>
-                      {!pin.labelOnly && (
-                        <>
-                          <input
-                            type="text"
-                            placeholder="Name"
-                            aria-label={`${pin.tag} — player name`}
-                            value={values[pin.id] || ""}
-                            onChange={(e) => setValue(pin.id, e.target.value)}
-                            style={{ color: roleColor(pin.role) }}
-                          />
-                          <span className={styles.nameDisplay} style={{ color: roleColor(pin.role) }}>
-                            {values[pin.id] || ""}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* MARKER LAYER — always on, every viewport. The tappable, keyed
-                  representation; the only map content shown on mobile. */}
+              {/* MARKER LAYER — the SINGLE on-map representation of a pin, on
+                  every viewport: a tappable role-colored dot + icon + key badge.
+                  No on-map text labels or name inputs (those live only in the
+                  panel) — see MAP_PANEL_REDESIGN_HANDOFF.md (v2). */}
               <div className={styles.markerLayer}>
                 {boss.pins.map((pin) => {
                   if (pin.sidebarOnly) return null;
@@ -504,38 +441,29 @@ export default function BossTemplate({ boss }) {
                 })}
               </div>
 
-              {/* On-image assignment cards (boss.overlays) — captured in the
-                  export, display-only, mirror the sidebar values. Retained for
-                  backward compatibility; the export key now covers the same need. */}
-              {boss.overlays?.map((ov) => (
-                <div
-                  key={ov.id}
-                  className={styles.overlayCard}
-                  style={{ left: `${ov.x}%`, top: `${ov.y}%` }}
-                >
-                  <div className={styles.overlayTitle}>{ov.title}</div>
-                  {ov.pins.map((pinId) => {
-                    const pin = pinById[pinId];
-                    if (!pin) return null;
-                    return (
-                      <div className={styles.overlayRow} key={pinId}>
-                        <span
-                          className={styles.overlayDot}
-                          style={{ background: roleColor(pin.role) }}
-                        />
-                        <span className={styles.overlayLabel}>
-                          {pin.cardLabel || pin.sidebarLabel}
-                        </span>
-                        <span
-                          className={`${styles.overlayName} ${values[pinId] ? "" : styles.overlayEmpty}`}
-                        >
-                          {values[pinId] || "—"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+              {/* EXPORT-ONLY NAME LAYER — hidden on screen; shown only during a
+                  "names on map" capture, painting each filled name beside its
+                  marker. This is the one place names appear on the map. */}
+              <div className={styles.exportNames} aria-hidden="true">
+                {boss.pins.map((pin) => {
+                  if (pin.sidebarOnly || pin.labelOnly) return null;
+                  const name = values[pin.id];
+                  if (!name) return null;
+                  return (
+                    <span
+                      key={pin.id}
+                      className={styles.exportName}
+                      style={{
+                        left: `${pin.x}%`,
+                        top: `${pin.y}%`,
+                        color: roleColor(pin.role),
+                      }}
+                    >
+                      {name}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
 
             {/* EXPORT KEY — hidden on screen; shown only during a map+key capture
@@ -664,8 +592,19 @@ export default function BossTemplate({ boss }) {
           </div>
 
           <div className={styles.panel}>
-            <h2>Roster — tap a row to find it on the map</h2>
-            {boss.groups.map((group) => (
+            <div className={styles.rosterHead}>
+              <h2>Roster — tap a row to find it on the map</h2>
+              <button
+                type="button"
+                className={styles.collapseBtn}
+                aria-expanded={rosterOpen}
+                onClick={() => setRosterOpen((o) => !o)}
+              >
+                {rosterOpen ? "Collapse" : "Expand"}
+              </button>
+            </div>
+            {rosterOpen &&
+              boss.groups.map((group) => (
               <div className={styles.quadBlock} key={group.id}>
                 <div className={styles.quadTitle}>{group.title}</div>
                 {group.pins.map((pinId) => {
@@ -709,9 +648,9 @@ export default function BossTemplate({ boss }) {
                       />
                     </div>
                   );
-                })}
-              </div>
-            ))}
+                  })}
+                </div>
+              ))}
           </div>
         </div>
       </div>

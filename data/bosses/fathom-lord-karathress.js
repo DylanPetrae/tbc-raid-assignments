@@ -89,18 +89,10 @@ const karathress = {
     },
   ],
 
-  // On-image assignment card(s), captured in the PNG export. The grouped healers
-  // are sidebarOnly (no map pin), so this card is how their names reach the
-  // shared image. Positioned on the open floor at the left, clear of the fight.
-  overlays: [
-    {
-      id: "healers",
-      title: "Healers",
-      x: 2.5,
-      y: 30,
-      pins: ["heal-mt1", "heal-mt2", "heal-tid1", "heal-tid2", "heal-car", "heal-raid1"],
-    },
-  ],
+  // Note: grouped healers are sidebarOnly (no map pin); their names reach the PNG
+  // via the map+key export's key panel (the old on-image overlay card was dropped
+  // in the v2 redesign — no floating overlays on the map). `cardLabel` is retained
+  // for the compact label used in that export key.
 
   // Fight priorities surfaced in the on-page "Fight Notes & Priorities" panel.
   // Sourced from the user's strategy video for the current (post-nerf) tier.

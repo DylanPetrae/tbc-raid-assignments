@@ -5,17 +5,19 @@
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
 **Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes)
-· **4/10 bosses built** · **Map redesign landed** — keyed markers + linked panel +
-two export modes (see `MAP_PANEL_REDESIGN_HANDOFF.md`)
+· **4/10 bosses built** · **Map redesign v2 landed** — markers-only map + docked collapsible
+panel + linked highlight + two export modes (see `MAP_PANEL_REDESIGN_HANDOFF.md` v2)
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
-> **Next step (2026-06-22):** Map-panel redesign is implemented on the shared component
-> (markers-only on mobile, labels kept as a desktop layer, role-derived key badges,
-> bidirectional tap-highlight, map+key / names-on-map export). Build + lint pass; static
-> renders verified at desktop + 375px for Vashj/Karathress (no on-map text overlap on
-> mobile). **Still needs a human click-pass:** the tap-to-highlight linking and the actual
-> export PNG in both modes (couldn't be automated — no browser driver). After sign-off,
-> next boss is Solarian (TK) or another of the remaining 6, via the recipe in §3.
+> **Next step (2026-06-22):** Map redesign **v2** implemented — a **replace**, not an add: the map
+> shows **markers only** (role dot + icon + key badge) on every viewport, all names in the **docked,
+> collapsible** panel, bidirectional tap-highlight, and two export modes (map+key default /
+> names-on-map). The v1 desktop label layer + the floating `overlays` card were **removed**;
+> `labelDx`/`labelDy` are now no-ops. Build + lint pass; static renders verified at desktop + 375px
+> (single representation, no on-map text; Karathress's council/tank cluster is tight but legible —
+> worth an eyeball). **Still needs a human click-pass:** tap-highlight linking + the export PNGs in
+> both modes (no browser driver to automate). After sign-off, next boss is Solarian (TK) or another
+> of the remaining 6, via §3.
 
 ---
 
@@ -99,39 +101,37 @@ Role `key` must map to a `--<key>-role` CSS var in `globals.css`
 
 Optional pin fields (all additive — absent on normal pins, so older bosses are unaffected):
 
-- **`labelOnly: true`** (Void Reaver) — map-only annotation: renders just its tag, **no** name
-  input and no mirrored export span. For non-player markers (boss position) or a group position
-  that isn't an individual assignment (DPS stack, melee/ranged zones). Left out of `groups`.
-- **`icon`** (Karathress) — generic role glyph rendered inline-SVG in the tag: `tank` (shield),
-  `healer` (cross), `melee` (crossed swords), `ranged` (arrow). Inherits the role color; export-safe.
-- **`labelDx` / `labelDy`** (Karathress) — percent offsets that shift a pin's **label** away from
-  its true spot in tight stacks. A dot marks the real position and a leader line connects them, so
-  positions stay accurate while crowded labels stay readable.
-- **`noLeader: true`** (Morogrim) — with `labelDx`/`labelDy`, draw the offset label + dot but **no**
-  connector line. For fillable pins whose name-input box would otherwise sit on top of the line
-  (the line ends at the label block's center, behind the box).
-- **`sidebarOnly: true`** (Karathress) — a roster assignment with **no** map pin (e.g. floating
-  healers). Appears in the sidebar via `groups` but is skipped on the map; needs no `x`/`y`.
-- **`cardLabel`** (Karathress) — short label used for a pin's row in an on-image `overlays` card
-  (falls back to `sidebarLabel`). Keeps the compact card readable.
+- **`labelOnly: true`** (Void Reaver) — map-only marker with **no panel row** and no name input.
+  For non-player markers (boss position) or a group position that isn't an individual assignment
+  (DPS stack, melee/ranged zones, generators). Left out of `groups`; listed in the export key's
+  "Map markers" section.
+- **`icon`** (Karathress) — generic role glyph rendered inline-SVG inside the marker dot: `tank`
+  (shield), `healer` (cross), `melee` (crossed swords), `ranged` (arrow). Inherits role color.
+- **`sidebarOnly: true`** (Karathress) — a roster assignment with **no map marker** (e.g. floating
+  healers). Appears in the panel + export key via `groups` but is skipped on the map; needs no `x`/`y`.
+- **`cardLabel`** (Karathress) — short label used for a pin's row in the **export key** panel
+  (falls back to `sidebarLabel`). Keeps the compact key readable.
 - **`mapKey`** (Karathress council) — overrides a pin's auto-computed key badge (e.g. `"1"`–`"4"`
   for kill order). Pins with `mapKey` are excluded from auto letter-indexing.
 - **Role `keyLetter`** — overrides the badge letter derived for that role (default = role `name`'s
   first letter, uppercased). The escape hatch if two roles would otherwise share a letter.
+- **`labelDx` / `labelDy` / `noLeader`** — **deprecated no-ops** as of the v2 redesign (the on-map
+  label layer they positioned was removed). Parsed-but-ignored for back-compat; safe to leave or strip.
 
-### Two-layer map model + key badges (2026-06-22 redesign)
-The map renders two stacked layers, both fed by the same `pins`:
-- **Marker layer** (always on, every viewport): each non-`sidebarOnly` pin is a small role-colored
-  marker (dot + `icon` + a **key badge**) — the tappable element and the *only* map content shown
-  on mobile. **Key badge** = role's `keyLetter` (or role `name` initial), indexed (1,2,3…) only when
-  a letter has >1 on-map member; `mapKey` overrides. Council kill-order numbers come from `mapKey`.
-- **Label layer** (desktop only — `display:none` ≤760px): the tag + name `<input>` positioned with
-  `labelDx`/`labelDy` + leader line, as before. This is why `labelDx`/`labelDy` are still meaningful
-  (they tune the desktop labels); the handoff's "they become no-ops" was overruled by keeping a
-  desktop label layer.
+### Single-representation map + key badges (2026-06-22 v2 redesign)
+Per `MAP_PANEL_REDESIGN_HANDOFF.md` (v2): exactly **one** representation of a pin on the map (a
+marker) and names live in **one** place (the docked panel). No on-map text labels or name inputs on
+any viewport. If a pin ever shows both a label and a marker, that's the bug v2 fixed.
+- **Marker layer** (the only on-map content, every viewport): each non-`sidebarOnly` pin is a small
+  role-colored marker — dot + `icon` + a **key badge** — with a ≥44px tap hit box. **Key badge** =
+  role's `keyLetter` (or role `name` initial), indexed (1,2,3…) only when a letter has >1 on-map
+  member; `mapKey` overrides (council = kill order 1–4).
+- **Docked panel** holds every fillable assignment (key badge + role dot/icon + `sidebarLabel` +
+  name input), grouped by `groups`, beside the map (wide) / below it (narrow). **Collapsible** to
+  reveal the whole map. Never a floating on-map overlay (the old `overlays` card was removed).
 - **Highlight:** tapping a marker or a panel key-badge sets one shared `activeId` — the marker pulses
   and the matching roster row highlights + scrolls into view (both directions). Esc / map-background
-  click / second tap clears it. Cleared during export.
+  click / second tap clears it. Cleared during export. Hover is a desktop-only `@media (hover:hover)` add-on.
 
 ### Export modes (2026-06-22)
 Segmented control next to "Export as image", choice persisted in `localStorage`
@@ -139,19 +139,18 @@ Segmented control next to "Export as image", choice persisted in `localStorage`
 - **Map + key:** clean marker map composed with a key panel (badge → role → typed name for every
   assignment + a keyed "Map markers" list of zones), one PNG. Key sits beside the map for landscape
   plates, stacked under for portrait (chosen from `imageWidth/imageHeight`). `sidebarOnly` roles
-  reach the export here, so the `overlays` card is now largely redundant (kept for back-compat; can
-  be dropped per boss later).
-- **Names on map:** the desktop label layer painted onto the map (the old export), via the
-  `.exporting` input→span swap. Markers + key hidden. Best for sparse fights.
+  reach the export here (this replaced the old on-image `overlays` card).
+- **Names on map:** an export-only name layer paints each filled name beside its marker (markers stay
+  visible). The one place names appear on the map. Best for sparse fights; crowds dense ones.
 
 `notes` (optional, Karathress) is an array of `{heading, items[]}` sections rendered in an on-page
 **Fight Notes & Priorities** panel below the map + assignments — for kill order, mechanics, opener,
 tank/healer tips, etc.
 
-`overlays` (optional, Karathress) is an array of on-image assignment cards `{id, title, x, y%, pins[]}`
-rendered **inside the export frame** (so they appear in the shared PNG). Each card lists its pins as
-`cardLabel → typed name` rows, display-only and synced to the sidebar. This is how `sidebarOnly`
-roles (e.g. grouped healers) reach the exported image; empty rows show a faint dash.
+**`overlays` — removed in the v2 redesign.** The on-image assignment card violated v2's "names live
+in one docked place, never a floating on-map overlay" rule and is now redundant: `sidebarOnly`
+roles reach the PNG through the map+key export's key panel instead. The field is no longer read; it
+was dropped from Karathress.
 
 ## 4. Roadmap
 
@@ -248,7 +247,21 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
-- **2026-06-22** — **Map-panel redesign: keyed markers + linked panel + two export modes**
+- **2026-06-22** — **Map redesign v2: single-representation markers-only map** (per
+  `MAP_PANEL_REDESIGN_HANDOFF.md` v2, which superseded v1). v1 layered the new markers *on top of*
+  the old on-map text labels + name inputs, so each pin showed ~4 things at once — the busyness the
+  user flagged. v2 is a **replace**: **removed** the entire on-map label layer (tag text, name
+  `<input>`/`.nameDisplay`, the `labelDx`/`labelDy` leader-line + `.posDot`/`.leaders` machinery) so
+  the **marker is the only on-map representation on every viewport** and names live solely in the
+  panel. Also **removed the floating `overlays` card** (violated v2's docked-panel/no-floating-overlay
+  rule; `sidebarOnly` healers now reach the PNG via the map+key export key instead) — dropped from
+  Karathress data. Made the **roster panel collapsible** (fold to see the whole map). Rewrote the
+  **names-on-map export** to an export-only name layer (the old label layer it reused is gone).
+  `labelDx`/`labelDy`/`noLeader` are now parsed-but-ignored no-ops. Build + lint pass; static renders
+  verified desktop + 375px for Vashj/Karathress/Morogrim (single representation, no on-map text).
+  Karathress's tight council/tank cluster has markers sitting close (no more fan-out) — legible but
+  worth an eyeball. **Not yet click-verified:** live tap-highlight + export PNGs (no browser driver).
+- **2026-06-22** — **Map-panel redesign (v1, superseded same day by v2 above): keyed markers + linked panel + two export modes**
   (per `MAP_PANEL_REDESIGN_HANDOFF.md`). Root-caused mobile label overlap by splitting the map into
   a always-on **marker layer** (role dot + icon + key badge, the only map content ≤760px) and a
   **desktop-only label layer** (the old tag+input, CSS-hidden on mobile) — so `labelDx`/`labelDy`
