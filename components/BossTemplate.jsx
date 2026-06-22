@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./BossTemplate.module.css";
 
 // Shared boss-position template. Fed entirely by a per-boss data object
@@ -8,18 +8,28 @@ import styles from "./BossTemplate.module.css";
 // of pins (id, role color key, tag, sidebarLabel, x%, y%), groups (how pins
 // are bucketed in the sidebar roster panel), and roles (legend entries).
 //
-// Carries forward the lessons from the Vashj prototype:
-//  - pin inputs are mirrored by a hidden <span class="name-display"> that's
-//    shown (and the <input> hidden) only while exporting, because
-//    html2canvas does not reliably paint live form-control text.
-//  - "Export as image" / "Save roster" / "Load roster" / "Clear all" all
-//    operate on the same in-memory state object, keyed by pin id.
+// Two-layer map model:
+//  - MARKER LAYER (always on, every viewport): each positioned pin renders as a
+//    small role-colored marker (dot + role icon + a short KEY BADGE). This is the
+//    canonical, tappable representation and the only thing shown on mobile.
+//  - LABEL LAYER (desktop only, hidden under the mobile breakpoint via CSS): the
+//    old tag + name <input>, positioned with labelDx/labelDy + leader line. Names
+//    overlapping on narrow screens was the original problem, so the label layer is
+//    suppressed there and the panel becomes the single source for names.
+//  Tapping a marker highlights its panel row (and scrolls it into view) and vice
+//  versa, so a dot and a name are always linkable even with no on-map text.
+//
+// Carries forward the Vashj-prototype lessons:
+//  - pin inputs are mirrored by a hidden <span class="name-display"> shown (and
+//    the <input> hidden) only while exporting, because html2canvas does not
+//    reliably paint live form-control text.
+//  - "Export as image" / "Save roster" / "Load roster" / "Clear all" all operate
+//    on the same in-memory state object, keyed by pin id.
 
 // Optional generic role glyphs for pins that set an `icon` key. Inline SVG
-// (not external assets) so they inherit the tag's color via currentColor and
+// (not external assets) so they inherit the current color via currentColor and
 // render reliably under html2canvas at export. Generic on purpose — tank /
-// healer / melee / ranged — so they're reusable across every boss without
-// committing a slot to a specific class/spec.
+// healer / melee / ranged — so they're reusable across every boss.
 function RoleIcon({ icon }) {
   if (!icon) return null;
   const common = {
@@ -28,7 +38,7 @@ function RoleIcon({ icon }) {
     height: "1.05em",
     "aria-hidden": true,
     focusable: "false",
-    style: { marginRight: "3px", verticalAlign: "-0.14em", flexShrink: 0 },
+    style: { verticalAlign: "-0.14em", flexShrink: 0 },
   };
   switch (icon) {
     case "tank": // shield
@@ -63,33 +73,90 @@ function RoleIcon({ icon }) {
 export default function BossTemplate({ boss }) {
   const [values, setValues] = useState({});
   const [week, setWeek] = useState("");
-  const [exporting, setExporting] = useState(false);
-  // Autosave status surfaced to the user: "" (nothing), "restored" (loaded a
-  // previous fill on mount), or "saved" (the current fill is persisted).
+  // null when idle; "mapkey" or "names" while a PNG is being captured.
+  const [capture, setCapture] = useState(null);
+  // The pin currently highlighted by a marker/panel tap (links the two layers).
+  const [activeId, setActiveId] = useState(null);
+  // Preferred export composition: "mapkey" (clean markers + a key panel) or
+  // "names" (names painted on the map). Persisted per browser like other prefs.
+  const [exportMode, setExportMode] = useState("mapkey");
+  // Autosave status: "" (nothing), "restored" (loaded a previous fill on mount),
+  // or "saved" (the current fill is persisted).
   const [saveStatus, setSaveStatus] = useState("");
   // Snapshot of the fill before the last "Clear all", so it can be undone.
   const [undoData, setUndoData] = useState(null);
   // True if the boss image failed to load (e.g. asset not added yet).
   const [imgError, setImgError] = useState(false);
-  const frameRef = useRef(null);
+  const exportRootRef = useRef(null);
   const undoTimer = useRef(null);
+  // Panel-row elements keyed by pin id, so a marker tap can scroll the row in.
+  const rowRefs = useRef({});
   // Gate the autosave effect so it doesn't clobber storage on the very first
   // commit (before the load effect has had a chance to restore).
   const hasMounted = useRef(false);
 
-  const pinById = Object.fromEntries(boss.pins.map((p) => [p.id, p]));
+  const pinById = useMemo(
+    () => Object.fromEntries(boss.pins.map((p) => [p.id, p])),
+    [boss]
+  );
+  const roleByKey = useMemo(
+    () => Object.fromEntries(boss.roles.map((r) => [r.key, r])),
+    [boss]
+  );
   const storageKey = `tbc-raid:roster:${boss.slug}`;
-  // CSS aspect-ratio string (e.g. "1672 / 941") from the boss's real image
-  // dimensions, used to size the missing-image fallback to the right shape.
+  const exportModeKey = `tbc-raid:exportmode:${boss.slug}`;
+  // CSS aspect-ratio string from the boss's real image dimensions, used to size
+  // the missing-image fallback to the right shape.
   const imageRatio =
     boss.imageWidth && boss.imageHeight
       ? `${boss.imageWidth} / ${boss.imageHeight}`
       : undefined;
+  // Landscape plates get the export key beside the map; portrait plates stack it
+  // underneath (Vashj is the only portrait boss so far).
+  const keyBeside =
+    !boss.imageWidth || !boss.imageHeight || boss.imageWidth >= boss.imageHeight;
 
-  // Resolve each role's CSS var to a literal color. The leader-line <svg> needs
-  // this because html2canvas serializes the SVG and does NOT resolve var(--x)
-  // inside it, so var()-stroked lines would drop out of the exported PNG. On
-  // screen the var() fallback below is fine; this just makes export faithful.
+  // Key badge per on-map pin. Letter = role.keyLetter, else the role name's
+  // initial (never hardcoded) — indexed (1,2,3…) only when a letter has >1 on-map
+  // member. An explicit pin.mapKey overrides everything (e.g. council kill order).
+  const badges = useMemo(() => {
+    const onMap = boss.pins.filter((p) => !p.sidebarOnly);
+    const letterFor = {};
+    const counts = {};
+    for (const p of onMap) {
+      if (p.mapKey) continue;
+      const role = roleByKey[p.role];
+      const letter = (role?.keyLetter || role?.name?.[0] || p.role[0] || "?")
+        .toString()
+        .toUpperCase();
+      letterFor[p.id] = letter;
+      counts[letter] = (counts[letter] || 0) + 1;
+    }
+    const seen = {};
+    const out = {};
+    for (const p of onMap) {
+      if (p.mapKey) {
+        out[p.id] = p.mapKey;
+        continue;
+      }
+      const letter = letterFor[p.id];
+      if (counts[letter] > 1) {
+        seen[letter] = (seen[letter] || 0) + 1;
+        out[p.id] = `${letter}${seen[letter]}`;
+      } else {
+        out[p.id] = letter;
+      }
+    }
+    return out;
+  }, [boss, roleByKey]);
+
+  // labelOnly pins (boss/zone markers) — keyed on the map, listed in the export
+  // key under "Map markers" rather than as fillable assignment rows.
+  const zonePins = useMemo(() => boss.pins.filter((p) => p.labelOnly), [boss]);
+
+  // Resolve each role's CSS var to a literal color. html2canvas does NOT resolve
+  // var(--x) inside serialized SVG (leader lines) and is more reliable with
+  // literals on the marker/badge fills too, so we compute literals once on mount.
   const [roleColors, setRoleColors] = useState({});
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -103,11 +170,13 @@ export default function BossTemplate({ boss }) {
   }, [boss.slug]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Restore the last fill for this boss from localStorage on mount. Officers
-  // type ~13 names per week; a refresh or stray back-button must not wipe them.
-  // This deliberately sets state after mount (not via a useState initializer)
-  // so the server-rendered empty markup matches the first client render and
-  // we avoid a hydration mismatch — the one intended cascading render.
+  function roleColor(role) {
+    return roleColors[role] || `var(--${role}-role)`;
+  }
+
+  // Restore the last fill (and export-mode pref) for this boss on mount. Set
+  // after mount (not via a useState initializer) so the server-rendered empty
+  // markup matches the first client render and we avoid a hydration mismatch.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
@@ -124,6 +193,8 @@ export default function BossTemplate({ boss }) {
           setSaveStatus("restored");
         }
       }
+      const mode = window.localStorage.getItem(exportModeKey);
+      if (mode === "mapkey" || mode === "names") setExportMode(mode);
     } catch {
       // Corrupt/blocked storage — start clean rather than crash.
     }
@@ -131,8 +202,8 @@ export default function BossTemplate({ boss }) {
   }, [boss.slug]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Persist on every change. Skipped on the first commit (hasMounted gate) so
-  // the initial empty state can't overwrite a saved fill before it's restored.
+  // Persist on every change. Skipped on the first commit (hasMounted gate) so the
+  // initial empty state can't overwrite a saved fill before it's restored.
   useEffect(() => {
     if (!hasMounted.current) {
       hasMounted.current = true;
@@ -145,6 +216,32 @@ export default function BossTemplate({ boss }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, week]);
+
+  // Clear the active highlight on Escape.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") setActiveId(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // When a highlight is set (from either layer), bring the matching panel row
+  // into view so marker→name linking works even when the panel scrolled away.
+  useEffect(() => {
+    if (!activeId) return;
+    const el = rowRefs.current[activeId];
+    if (!el) return;
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+  }, [activeId]);
+
+  function toggleActive(id) {
+    setActiveId((cur) => (cur === id ? null : id));
+  }
 
   function setValue(id, val) {
     setValues((v) => ({ ...v, [id]: val }));
@@ -197,6 +294,15 @@ export default function BossTemplate({ boss }) {
     if (undoTimer.current) clearTimeout(undoTimer.current);
   }, []);
 
+  function chooseExportMode(mode) {
+    setExportMode(mode);
+    try {
+      window.localStorage.setItem(exportModeKey, mode);
+    } catch {
+      // ignore — non-essential preference
+    }
+  }
+
   function handleSave() {
     const state = getState();
     const blob = new Blob([JSON.stringify(state, null, 2)], {
@@ -233,14 +339,17 @@ export default function BossTemplate({ boss }) {
   }
 
   async function handleExport() {
-    const frame = frameRef.current;
-    if (!frame) return;
+    const root = exportRootRef.current;
+    if (!root) return;
     const { default: html2canvas } = await import("html2canvas");
-    setExporting(true);
-    // Let the .exporting class swap input -> name-display before capture.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Drop any active highlight so the pulse/ring isn't baked into the PNG, and
+    // switch the frame into the chosen capture mode (labels vs. key panel).
+    setActiveId(null);
+    setCapture(exportMode);
+    // Let the capture classes apply (label layer / key panel toggle) before shot.
+    await new Promise((resolve) => setTimeout(resolve, 60));
     try {
-      const canvas = await html2canvas(frame, { backgroundColor: null, scale: 2 });
+      const canvas = await html2canvas(root, { backgroundColor: null, scale: 2 });
       const link = document.createElement("a");
       const weekPart = week.replace(/[^a-z0-9]+/gi, "_") || "roster";
       link.download = `${boss.slug}_positions_${weekPart}.png`;
@@ -249,9 +358,18 @@ export default function BossTemplate({ boss }) {
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
-      setExporting(false);
+      setCapture(null);
     }
   }
+
+  // Capture-time classes on the export wrapper: which layer is painted, and how
+  // the key panel is laid out relative to the map.
+  const captureClass =
+    capture === "mapkey"
+      ? `${styles.captureMapKey} ${keyBeside ? styles.keyBeside : styles.keyStacked}`
+      : capture === "names"
+        ? styles.captureNames
+        : "";
 
   return (
     <div className={styles.wrap}>
@@ -260,145 +378,223 @@ export default function BossTemplate({ boss }) {
 
       <div className={styles.layout}>
         <div className={styles.mapCol}>
-          <div
-            ref={frameRef}
-            className={`${styles.mapFrame} ${exporting ? styles.exporting : ""}`}
-          >
-            {imgError ? (
-              <div
-                className={styles.imgFallback}
-                role="img"
-                aria-label={boss.imageAlt || `${boss.name} platform diagram`}
-                style={imageRatio ? { aspectRatio: imageRatio } : undefined}
-              >
-                Platform diagram couldn’t be loaded.
-                <br />
-                You can still fill in names below.
-              </div>
-            ) : (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={boss.image}
-                alt={boss.imageAlt || `${boss.name} platform diagram`}
-                onError={() => setImgError(true)}
-              />
-            )}
-
-            {/* Leader lines connecting offset labels back to their true dot. */}
-            <svg
-              className={styles.leaders}
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
+          <div ref={exportRootRef} className={`${styles.exportRoot} ${captureClass}`}>
+            <div
+              className={styles.mapFrame}
+              onClick={() => setActiveId(null)}
             >
-              {boss.pins.map((pin) => {
-                const dx = pin.labelDx || 0;
-                const dy = pin.labelDy || 0;
-                // noLeader: offset the label but draw no connector line. Used for
-                // fillable pins whose name box would otherwise sit on top of the
-                // line (the line ends at the block center, behind the input box).
-                if ((!dx && !dy) || pin.noLeader) return null;
-                return (
-                  <line
-                    key={pin.id}
-                    x1={pin.x}
-                    y1={pin.y}
-                    x2={pin.x + dx}
-                    y2={pin.y + dy}
-                    stroke={roleColors[pin.role] || `var(--${pin.role}-role)`}
-                    strokeWidth="1"
-                    vectorEffect="non-scaling-stroke"
-                    opacity="0.5"
-                  />
-                );
-              })}
-            </svg>
+              {imgError ? (
+                <div
+                  className={styles.imgFallback}
+                  role="img"
+                  aria-label={boss.imageAlt || `${boss.name} platform diagram`}
+                  style={imageRatio ? { aspectRatio: imageRatio } : undefined}
+                >
+                  Platform diagram couldn’t be loaded.
+                  <br />
+                  You can still fill in names below.
+                </div>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={boss.image}
+                  alt={boss.imageAlt || `${boss.name} platform diagram`}
+                  onError={() => setImgError(true)}
+                />
+              )}
 
-            {boss.pins.map((pin) => {
-              // sidebarOnly pins are roster assignments with no map position
-              // (e.g. floating healers) — they appear in the sidebar but not here.
-              if (pin.sidebarOnly) return null;
-              // labelDx/labelDy (percent of image) shift a pin's LABEL away from
-              // its true spot so labels don't collide in tight stacks. When set,
-              // a small dot marks the real position and the label sits offset.
-              const dx = pin.labelDx || 0;
-              const dy = pin.labelDy || 0;
-              const offsetLabel = dx !== 0 || dy !== 0;
-              return (
-                <Fragment key={pin.id}>
-                  {offsetLabel && (
-                    <span
-                      className={styles.posDot}
-                      style={{
-                        left: `${pin.x}%`,
-                        top: `${pin.y}%`,
-                        background: `var(--${pin.role}-role)`,
-                      }}
-                      aria-hidden="true"
-                    />
-                  )}
-                  <div
-                    className={styles.pin}
-                    style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%` }}
-                  >
-                    <span className={styles.tag} style={{ color: `var(--${pin.role}-role)` }}>
-                      <RoleIcon icon={pin.icon} />
-                      {pin.tag}
-                    </span>
-                    {/* labelOnly pins (e.g. the boss marker, the DPS stack) are
-                        map annotations with no player name — render just the tag. */}
-                    {!pin.labelOnly && (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="Name"
-                          aria-label={`${pin.tag} — player name`}
-                          value={values[pin.id] || ""}
-                          onChange={(e) => setValue(pin.id, e.target.value)}
-                          style={{ color: `var(--${pin.role}-role)` }}
-                        />
-                        <span className={styles.nameDisplay} style={{ color: `var(--${pin.role}-role)` }}>
-                          {values[pin.id] || ""}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </Fragment>
-              );
-            })}
-
-            {/* On-image assignment cards — captured in the export. Display-only;
-                they mirror the sidebar values (so off-map roles still appear in
-                the shared PNG). Plain text, so always export-safe. */}
-            {boss.overlays?.map((ov) => (
-              <div
-                key={ov.id}
-                className={styles.overlayCard}
-                style={{ left: `${ov.x}%`, top: `${ov.y}%` }}
-              >
-                <div className={styles.overlayTitle}>{ov.title}</div>
-                {ov.pins.map((pinId) => {
-                  const pin = pinById[pinId];
-                  if (!pin) return null;
-                  return (
-                    <div className={styles.overlayRow} key={pinId}>
-                      <span
-                        className={styles.overlayDot}
-                        style={{ background: `var(--${pin.role}-role)` }}
+              {/* DESKTOP LABEL LAYER — tag + name input + leader lines. Hidden
+                  under the mobile breakpoint (and during a map+key capture) via
+                  CSS; forced visible during a names capture. */}
+              <div className={styles.labelLayer} aria-hidden="false">
+                <svg
+                  className={styles.leaders}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {boss.pins.map((pin) => {
+                    if (pin.sidebarOnly) return null;
+                    const dx = pin.labelDx || 0;
+                    const dy = pin.labelDy || 0;
+                    // noLeader: offset the label but draw no connector (the line
+                    // would end behind the name box).
+                    if ((!dx && !dy) || pin.noLeader) return null;
+                    return (
+                      <line
+                        key={pin.id}
+                        x1={pin.x}
+                        y1={pin.y}
+                        x2={pin.x + dx}
+                        y2={pin.y + dy}
+                        stroke={roleColor(pin.role)}
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0.5"
                       />
-                      <span className={styles.overlayLabel}>
-                        {pin.cardLabel || pin.sidebarLabel}
+                    );
+                  })}
+                </svg>
+
+                {boss.pins.map((pin) => {
+                  if (pin.sidebarOnly) return null;
+                  const dx = pin.labelDx || 0;
+                  const dy = pin.labelDy || 0;
+                  return (
+                    <div
+                      key={pin.id}
+                      className={styles.pin}
+                      style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%` }}
+                    >
+                      <span className={styles.tag} style={{ color: roleColor(pin.role) }}>
+                        <RoleIcon icon={pin.icon} />
+                        {pin.tag}
                       </span>
-                      <span
-                        className={`${styles.overlayName} ${values[pinId] ? "" : styles.overlayEmpty}`}
-                      >
-                        {values[pinId] || "—"}
-                      </span>
+                      {!pin.labelOnly && (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Name"
+                            aria-label={`${pin.tag} — player name`}
+                            value={values[pin.id] || ""}
+                            onChange={(e) => setValue(pin.id, e.target.value)}
+                            style={{ color: roleColor(pin.role) }}
+                          />
+                          <span className={styles.nameDisplay} style={{ color: roleColor(pin.role) }}>
+                            {values[pin.id] || ""}
+                          </span>
+                        </>
+                      )}
                     </div>
                   );
                 })}
               </div>
-            ))}
+
+              {/* MARKER LAYER — always on, every viewport. The tappable, keyed
+                  representation; the only map content shown on mobile. */}
+              <div className={styles.markerLayer}>
+                {boss.pins.map((pin) => {
+                  if (pin.sidebarOnly) return null;
+                  const color = roleColor(pin.role);
+                  const badge = badges[pin.id];
+                  const isActive = activeId === pin.id;
+                  return (
+                    <button
+                      key={pin.id}
+                      type="button"
+                      className={`${styles.marker} ${isActive ? styles.markerActive : ""}`}
+                      style={{ left: `${pin.x}%`, top: `${pin.y}%`, borderColor: color }}
+                      aria-pressed={isActive}
+                      aria-label={`${badge ? badge + " · " : ""}${pin.tag || pin.sidebarLabel || pin.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleActive(pin.id);
+                      }}
+                    >
+                      <span className={styles.markerDot} style={{ background: color }}>
+                        <RoleIcon icon={pin.icon} />
+                      </span>
+                      {badge && (
+                        <span className={styles.markerBadge} style={{ color }}>
+                          {badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* On-image assignment cards (boss.overlays) — captured in the
+                  export, display-only, mirror the sidebar values. Retained for
+                  backward compatibility; the export key now covers the same need. */}
+              {boss.overlays?.map((ov) => (
+                <div
+                  key={ov.id}
+                  className={styles.overlayCard}
+                  style={{ left: `${ov.x}%`, top: `${ov.y}%` }}
+                >
+                  <div className={styles.overlayTitle}>{ov.title}</div>
+                  {ov.pins.map((pinId) => {
+                    const pin = pinById[pinId];
+                    if (!pin) return null;
+                    return (
+                      <div className={styles.overlayRow} key={pinId}>
+                        <span
+                          className={styles.overlayDot}
+                          style={{ background: roleColor(pin.role) }}
+                        />
+                        <span className={styles.overlayLabel}>
+                          {pin.cardLabel || pin.sidebarLabel}
+                        </span>
+                        <span
+                          className={`${styles.overlayName} ${values[pinId] ? "" : styles.overlayEmpty}`}
+                        >
+                          {values[pinId] || "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* EXPORT KEY — hidden on screen; shown only during a map+key capture
+                so the PNG is self-contained (badge → role → name for every
+                assignment, plus a keyed list of map markers/zones). */}
+            <div className={styles.exportKey} aria-hidden="true">
+              <div className={styles.exportKeyHead}>
+                {boss.name}
+                {week ? ` — ${week}` : ""}
+              </div>
+              {boss.groups.map((group) => (
+                <div className={styles.exportKeyGroup} key={group.id}>
+                  <div className={styles.exportKeyTitle}>{group.title}</div>
+                  {group.pins.map((pinId) => {
+                    const pin = pinById[pinId];
+                    if (!pin) return null;
+                    const color = roleColor(pin.role);
+                    const badge = badges[pinId];
+                    return (
+                      <div className={styles.exportKeyRow} key={pinId}>
+                        <span
+                          className={styles.exportKeyBadge}
+                          style={{ color, borderColor: color }}
+                        >
+                          {badge || "·"}
+                        </span>
+                        <span className={styles.exportKeyLabel}>
+                          {pin.cardLabel || pin.sidebarLabel}
+                        </span>
+                        <span
+                          className={`${styles.exportKeyName} ${values[pinId] ? "" : styles.exportKeyEmpty}`}
+                        >
+                          {values[pinId] || "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {zonePins.length > 0 && (
+                <div className={styles.exportKeyGroup}>
+                  <div className={styles.exportKeyTitle}>Map markers</div>
+                  {zonePins.map((pin) => {
+                    const color = roleColor(pin.role);
+                    return (
+                      <div className={styles.exportKeyRow} key={pin.id}>
+                        <span
+                          className={styles.exportKeyBadge}
+                          style={{ color, borderColor: color }}
+                        >
+                          {badges[pin.id]}
+                        </span>
+                        <span className={styles.exportKeyLabel}>{pin.tag}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -418,13 +614,34 @@ export default function BossTemplate({ boss }) {
                 }}
               />
             </div>
+            <div className={styles.exportRow}>
+              <span className={styles.exportRowLabel}>Export style</span>
+              <div className={styles.segmented} role="group" aria-label="Export style">
+                <button
+                  type="button"
+                  className={exportMode === "mapkey" ? styles.segActive : ""}
+                  aria-pressed={exportMode === "mapkey"}
+                  onClick={() => chooseExportMode("mapkey")}
+                >
+                  Map + key
+                </button>
+                <button
+                  type="button"
+                  className={exportMode === "names" ? styles.segActive : ""}
+                  aria-pressed={exportMode === "names"}
+                  onClick={() => chooseExportMode("names")}
+                >
+                  Names on map
+                </button>
+              </div>
+            </div>
             <div className={styles.btnRow}>
               <button
                 className={styles.primary}
                 onClick={handleExport}
-                disabled={exporting}
+                disabled={capture !== null}
               >
-                {exporting ? "Exporting…" : "Export as image"}
+                {capture !== null ? "Exporting…" : "Export as image"}
               </button>
               <button onClick={handleSave}>Save roster</button>
               <button onClick={handleLoad}>Load roster</button>
@@ -447,19 +664,40 @@ export default function BossTemplate({ boss }) {
           </div>
 
           <div className={styles.panel}>
-            <h2>Roster — type names here too</h2>
+            <h2>Roster — tap a row to find it on the map</h2>
             {boss.groups.map((group) => (
               <div className={styles.quadBlock} key={group.id}>
                 <div className={styles.quadTitle}>{group.title}</div>
                 {group.pins.map((pinId) => {
                   const pin = pinById[pinId];
                   const fieldId = `sidebar-${pinId}`;
+                  const badge = badges[pinId];
+                  const isActive = activeId === pinId;
                   return (
-                    <div className={styles.roleRow} key={pinId}>
-                      <span
-                        className={styles.dot}
-                        style={{ background: `var(--${pin.role}-role)` }}
-                      />
+                    <div
+                      className={`${styles.roleRow} ${isActive ? styles.roleRowActive : ""}`}
+                      key={pinId}
+                      ref={(el) => {
+                        rowRefs.current[pinId] = el;
+                      }}
+                    >
+                      {badge ? (
+                        <button
+                          type="button"
+                          className={`${styles.panelBadge} ${isActive ? styles.panelBadgeActive : ""}`}
+                          style={{ color: roleColor(pin.role), borderColor: roleColor(pin.role) }}
+                          aria-pressed={isActive}
+                          aria-label={`Highlight ${badge} on the map`}
+                          onClick={() => toggleActive(pinId)}
+                        >
+                          {badge}
+                        </button>
+                      ) : (
+                        <span
+                          className={styles.dot}
+                          style={{ background: roleColor(pin.role) }}
+                        />
+                      )}
                       <label htmlFor={fieldId}>{pin.sidebarLabel}</label>
                       <input
                         id={fieldId}
@@ -467,6 +705,7 @@ export default function BossTemplate({ boss }) {
                         aria-label={`${group.title}: ${pin.sidebarLabel}`}
                         value={values[pinId] || ""}
                         onChange={(e) => setValue(pinId, e.target.value)}
+                        onFocus={() => setActiveId(pinId)}
                       />
                     </div>
                   );

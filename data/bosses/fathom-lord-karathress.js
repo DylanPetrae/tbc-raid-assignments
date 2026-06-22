@@ -49,11 +49,12 @@ const karathress = {
   // the real spot) to keep the cluster readable. The center square (ranged +
   // raid healers) and the lone Caribdis healer aren't crowded, so no offset.
   pins: [
-    // Council members — map markers only (no name input). Tag = kill order.
-    { id: "m-karathress", role: "purple", tag: "4 · Karathress", labelOnly: true, x: 57, y: 76.5, labelDx: -4, labelDy: 10 },
-    { id: "m-sharkiss", role: "purple", tag: "2 · Sharkiss", labelOnly: true, x: 56.8, y: 68.6, labelDx: -10, labelDy: -6 },
-    { id: "m-tidalvess", role: "purple", tag: "1 · Tidalvess", labelOnly: true, x: 65.3, y: 72.2, labelDx: 2, labelDy: -8 },
-    { id: "m-caribdis", role: "purple", tag: "3 · Caribdis", labelOnly: true, x: 97, y: 49, labelDx: -12, labelDy: -1 },
+    // Council members — map markers only (no name input). mapKey = kill order, so
+    // the marker badge reads 1–4 (matching the tag) instead of an auto "C#".
+    { id: "m-karathress", role: "purple", mapKey: "4", tag: "4 · Karathress", labelOnly: true, x: 57, y: 76.5, labelDx: -4, labelDy: 10 },
+    { id: "m-sharkiss", role: "purple", mapKey: "2", tag: "2 · Sharkiss", labelOnly: true, x: 56.8, y: 68.6, labelDx: -10, labelDy: -6 },
+    { id: "m-tidalvess", role: "purple", mapKey: "1", tag: "1 · Tidalvess", labelOnly: true, x: 65.3, y: 72.2, labelDx: 2, labelDy: -8 },
+    { id: "m-caribdis", role: "purple", mapKey: "3", tag: "3 · Caribdis", labelOnly: true, x: 97, y: 49, labelDx: -12, labelDy: -1 },
 
     // Tanks (fillable)
     { id: "tank-ks", role: "blue", icon: "tank", tag: "MT", sidebarLabel: "Karathress + Sharkiss tank", x: 53, y: 75, labelDx: -9, labelDy: 2 },

@@ -4,14 +4,18 @@
 > Update it as work lands. `project_handoff_summary.md` is the frozen original brief (don't edit that);
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
-**Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes;
-Morogrim Tidewalker added) · **4/10 bosses built**
+**Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes)
+· **4/10 bosses built** · **Map redesign landed** — keyed markers + linked panel +
+two export modes (see `MAP_PANEL_REDESIGN_HANDOFF.md`)
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
-> **Next step (2026-06-22):** Morogrim is built + deployed; the user is reviewing the latest
-> label positions on the live page (Main Tank under the portrait at x73, Add Tank label
-> down-left with a leader line). Awaiting their confirmation / any final nudges. After that,
-> the next boss is Solarian (TK) or another from the remaining 6, via the recipe in §3.
+> **Next step (2026-06-22):** Map-panel redesign is implemented on the shared component
+> (markers-only on mobile, labels kept as a desktop layer, role-derived key badges,
+> bidirectional tap-highlight, map+key / names-on-map export). Build + lint pass; static
+> renders verified at desktop + 375px for Vashj/Karathress (no on-map text overlap on
+> mobile). **Still needs a human click-pass:** the tap-to-highlight linking and the actual
+> export PNG in both modes (couldn't be automated — no browser driver). After sign-off,
+> next boss is Solarian (TK) or another of the remaining 6, via the recipe in §3.
 
 ---
 
@@ -110,6 +114,35 @@ Optional pin fields (all additive — absent on normal pins, so older bosses are
   healers). Appears in the sidebar via `groups` but is skipped on the map; needs no `x`/`y`.
 - **`cardLabel`** (Karathress) — short label used for a pin's row in an on-image `overlays` card
   (falls back to `sidebarLabel`). Keeps the compact card readable.
+- **`mapKey`** (Karathress council) — overrides a pin's auto-computed key badge (e.g. `"1"`–`"4"`
+  for kill order). Pins with `mapKey` are excluded from auto letter-indexing.
+- **Role `keyLetter`** — overrides the badge letter derived for that role (default = role `name`'s
+  first letter, uppercased). The escape hatch if two roles would otherwise share a letter.
+
+### Two-layer map model + key badges (2026-06-22 redesign)
+The map renders two stacked layers, both fed by the same `pins`:
+- **Marker layer** (always on, every viewport): each non-`sidebarOnly` pin is a small role-colored
+  marker (dot + `icon` + a **key badge**) — the tappable element and the *only* map content shown
+  on mobile. **Key badge** = role's `keyLetter` (or role `name` initial), indexed (1,2,3…) only when
+  a letter has >1 on-map member; `mapKey` overrides. Council kill-order numbers come from `mapKey`.
+- **Label layer** (desktop only — `display:none` ≤760px): the tag + name `<input>` positioned with
+  `labelDx`/`labelDy` + leader line, as before. This is why `labelDx`/`labelDy` are still meaningful
+  (they tune the desktop labels); the handoff's "they become no-ops" was overruled by keeping a
+  desktop label layer.
+- **Highlight:** tapping a marker or a panel key-badge sets one shared `activeId` — the marker pulses
+  and the matching roster row highlights + scrolls into view (both directions). Esc / map-background
+  click / second tap clears it. Cleared during export.
+
+### Export modes (2026-06-22)
+Segmented control next to "Export as image", choice persisted in `localStorage`
+(`tbc-raid:exportmode:<slug>`). Default = **map + key**:
+- **Map + key:** clean marker map composed with a key panel (badge → role → typed name for every
+  assignment + a keyed "Map markers" list of zones), one PNG. Key sits beside the map for landscape
+  plates, stacked under for portrait (chosen from `imageWidth/imageHeight`). `sidebarOnly` roles
+  reach the export here, so the `overlays` card is now largely redundant (kept for back-compat; can
+  be dropped per boss later).
+- **Names on map:** the desktop label layer painted onto the map (the old export), via the
+  `.exporting` input→span swap. Markers + key hidden. Best for sparse fights.
 
 `notes` (optional, Karathress) is an array of `{heading, items[]}` sections rendered in an on-page
 **Fight Notes & Priorities** panel below the map + assignments — for kill order, mechanics, opener,
@@ -215,6 +248,23 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-22** — **Map-panel redesign: keyed markers + linked panel + two export modes**
+  (per `MAP_PANEL_REDESIGN_HANDOFF.md`). Root-caused mobile label overlap by splitting the map into
+  a always-on **marker layer** (role dot + icon + key badge, the only map content ≤760px) and a
+  **desktop-only label layer** (the old tag+input, CSS-hidden on mobile) — so `labelDx`/`labelDy`
+  tuning is preserved instead of becoming no-ops. Added **role-derived key badges** (role
+  `name` initial or `keyLetter` override, indexed only when >1 per letter; per-pin `mapKey` override
+  → council reads 1–4) shown on markers and as tap buttons on roster rows, with **bidirectional
+  highlight** (marker ↔ row, pulse + scroll-into-view, Esc/click-away clears). Reworked export into
+  two modes (segmented control, persisted): **map+key** (default — clean markers composed with a
+  badge→role→name key panel beside/under the map; `sidebarOnly` roles now reach the PNG) and
+  **names-on-map** (the prior export). Touch: markers have a ≥44px hit box; panel badges 40px on
+  mobile. Files: `BossTemplate.jsx` + `.module.css` rewritten; `mapKey` added to Karathress council.
+  All 4 bosses build; lint clean; static renders verified desktop + 375px (no on-map text overlap on
+  mobile). **Not yet click-verified:** live tap-highlight + the export PNGs (no browser driver in
+  the build env) — needs a human pass before deploy.
+- **2026-06-22** — **Morogrim: Add Tank pin raised to the melee DPS latitude** (`y` 54→50, `x`
+  unchanged at 73) per the user; label fan-out preserved.
 - **2026-06-22** — **Morogrim Tidewalker (SSC) — 4th boss (4/10).** Clean WebP plate (82 KB; keeps
   the baked murloc spawn cards + Morogrim's icon, per the user). Marker positions read from the
   user's annotated reference via color/blob detection (raid square, melee, add tank, 4 Watery-Grave
