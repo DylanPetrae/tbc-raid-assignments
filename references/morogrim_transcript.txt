@@ -1,0 +1,70 @@
+. Mortal Grim Tidewalker has two phases.
+Boss - Morogrim Tidewalker
+30:35
+Phase one is 100 to 25% and phase two is 25 to zero. In phase one, he'll cast
+30:40
+Tidal Wave, Watery Grave, and Earthquake. Title Wave is a frontal that deals frost damage and applies a
+30:46
+15-second attack speed debuff to those hit by it. Watery Grave will take four random players to the middle of the
+30:52
+arena, stunning them in a bubble and causing fall damage when they land. and earthquake will deal 4,000 damage to
+30:58
+everyone and summon two packs of six murlocs with one pack coming from both
+31:03
+sides of the arena. At 25% he'll still do earthquake with the murloc summons, but he'll no longer do watery grave and
+31:10
+instead those bubbles will become water globules that will explode when they reach their target. They'll only explode
+31:16
+if they reach the person they're targeting, not just by touching any random player. For this fight, you'll want two to three tanks with your
+31:23
+beefiest tank on Morogrim and your other two tanks on the ads. If you have a paladin tank, they're the best tank for
+31:28
+the Merurlo ads. Don't let any egos get in the way on who's the main tank or the off tank. We have the boss tank and the
+31:34
+ad tank, and paladins are just the best for ads. The other tanks can also do this, but we all just know that the
+31:40
+paladin tanks are just better designed for AoE tanking. Also, regarding the AD tanks, they should be fully geared
+31:46
+towards threat, as these mobs are not boss level mobs. They're only level 71, so at the absolute maximum they want to
+31:52
+be 5.2% crit immune just to avoid critical strikes from these mobs. Besides that, full gear towards threat
+31:58
+as they'll die very fast once they're picked up. Most groups will opt to position themselves like this. On pull,
+32:04
+they'll drag Morogrim to this pillar right here with the rest of your raid on the opposite pillar. And then you'll
+32:09
+have your resto druid or your priest at the bottom of the ramp to be able to reach all targets of watery grave. Make
+32:15
+sure you have thunderclap and demo shout on the boss as he does hit pretty hard. So reducing that incoming damage is
+32:21
+pretty nice. He'll typically cast watery grave every 20 seconds while casting earthquake and summoning murlocs every
+32:27
+40. However, on the PTR at least, both of these abilities seem incredibly delayed compared to their timers. I
+32:33
+think at one point we got him to 60% without him casting a single mechanic, which even in post nerf doesn't seem
+32:38
+right because he didn't get a health reduction in post nerf. If you're struggling with getting the murloc ads
+32:44
+after earthquake, you can have hunters place a frost trap on both sides of the packs to slow them down to give your
+32:49
+tank more time to pick up the ads. When the murlocs are summoned, they're typically drawn to your healers through
+32:55
+healer aggro. So, make sure you get aggro ASAP so they don't nuke your healers. Although their health is
+33:00
+significantly reduced and postnfer, they can still take out your healers pretty fast. Once they're picked up, drag them
+33:05
+to the butt of the boss and have your entire rag just AOE them down fast. This is phase one until 25%. At 25%, he'll no
+33:13
+longer cast watery grave and he'll cast the water globules. When they start getting close to your raid, the tank needs to move them away. Just keep doing
+33:20
+this until the boss is dead and that's the fight. Remember, the globules only explode if they hit who they're
+33:26
+targeting, not just any raid member. For some tips and notes from the PTR, your prop paladin can generate murloc threat
+33:32
+after the earthquake by healing a warlock who's life tapping to generate that heal aggro as well. Like I
+33:37
+mentioned earlier, a third tank is helpful if your AD tank does get watery graved while the Merlocks are out. And
+33:43
+other than that, there's not really much to this fight. It's pretty simple. It's a tank and spake. The raidwide damage is
+33:48
+not that distracting for your main tank to fall over. And this shouldn't take you too long to get this down. 

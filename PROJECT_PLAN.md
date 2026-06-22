@@ -5,7 +5,7 @@
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
 **Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes;
-Karathress healer overlay card + export-safe leader colors added) · **3/10 bosses built**
+Morogrim Tidewalker added) · **4/10 bosses built**
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
 ---
@@ -26,13 +26,14 @@ React component is driven by small per-boss data files. Scope is **SSC (6 bosses
 | Lady Vashj data file (reference implementation) | ✅ Done & validated |
 | Void Reaver (TK) data file | ✅ Done — WebP plate (86 KB), geometry overlay-verified, `labelOnly` markers; center cluster aligned tank→boss→DPS toward ring center |
 | Fathom-Lord Karathress (SSC) data file | ✅ Done — WebP plate (95 KB). Pin positions detected from the user's annotated reference (`*-positions.png`) and overlay-verified; tight bottom cluster uses `labelDx`/`labelDy` (dot + leader line) so labels stay readable. Role icons on tanks/healers/melee/ranged. Assignments: 3 tanks + 6 healers (2 main, 2 Tidalvess, 1 Caribdis on-map, 1 raid; the 5 non-Caribdis healers are `sidebarOnly`). On-page Fight Notes panel from the user's strategy video |
-| Other 7 bosses | ⛔ Not started — need clean arena screenshots + pin geometry each |
+| Morogrim Tidewalker (SSC) data file | ✅ Done — clean WebP plate (82 KB, keeps baked murloc/boss icons). Marker positions color/blob-detected from the user's annotated reference; 2 tanks + WG healer fillable, Melee/Ranged+Healers/4 Watery-Grave map markers, role icons + leader-line label fan-outs for the center-right cluster. Notes panel from the strategy video (2 phases) |
+| Other 6 bosses | ⛔ Not started — need clean arena screenshots + pin geometry each |
 | GitHub repo + Vercel deploy | ⏳ Repo exists; first push/deploy per `GIT_AND_DEPLOY.md` |
 | Autosave / data-loss protection | ✅ Done — per-boss localStorage, restored on load |
 | Mobile/touch usability of on-image pins | ✅ Improved — 44px sidebar targets, larger pins/inputs on mobile |
 | Export-as-image feedback | ✅ Done — button disables + shows "Exporting…" |
 
-**Progress: 3 / 10 bosses fully built** (Vashj, Void Reaver, Karathress). The abstraction holds
+**Progress: 4 / 10 bosses fully built** (Vashj, Void Reaver, Karathress, Morogrim). The abstraction holds
 across symmetric quadrants, a few fixed roles, and a 13-pin council fight — remaining work is
 content (images + geometry) per the recipe.
 
@@ -201,6 +202,14 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-22** — **Morogrim Tidewalker (SSC) — 4th boss (4/10).** Clean WebP plate (82 KB; keeps
+  the baked murloc spawn cards + Morogrim's icon, per the user). Marker positions read from the
+  user's annotated reference via color/blob detection (raid square, melee, add tank, 4 Watery-Grave
+  spawns auto-detected; main tank + ramp healer from the user's description). Pin set: 2 tanks + WG
+  healer fillable; Melee, Ranged+Healers, and 4 Watery-Grave map markers; role icons + leader-line
+  label fan-outs for the tight center-right cluster. Two-phase Fight Notes panel from the strategy
+  video. Lint + build passing. (No Google Sheet link was ever recorded; the provided image +
+  annotated reference + transcript were sufficient.)
 - **2026-06-22** — **On-image assignment cards (`overlays`) + export-safe leader colors.** Added a
   generic `overlays` template feature: positioned cards rendered inside the export frame, listing
   `cardLabel → typed name` rows (display-only, synced to the sidebar) so `sidebarOnly` roles reach
