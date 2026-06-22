@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import styles from "./BossTemplate.module.css";
 
 // Shared boss-position template. Fed entirely by a per-boss data object
@@ -14,6 +14,52 @@ import styles from "./BossTemplate.module.css";
 //    html2canvas does not reliably paint live form-control text.
 //  - "Export as image" / "Save roster" / "Load roster" / "Clear all" all
 //    operate on the same in-memory state object, keyed by pin id.
+
+// Optional generic role glyphs for pins that set an `icon` key. Inline SVG
+// (not external assets) so they inherit the tag's color via currentColor and
+// render reliably under html2canvas at export. Generic on purpose — tank /
+// healer / melee / ranged — so they're reusable across every boss without
+// committing a slot to a specific class/spec.
+function RoleIcon({ icon }) {
+  if (!icon) return null;
+  const common = {
+    viewBox: "0 0 16 16",
+    width: "1.05em",
+    height: "1.05em",
+    "aria-hidden": true,
+    focusable: "false",
+    style: { marginRight: "3px", verticalAlign: "-0.14em", flexShrink: 0 },
+  };
+  switch (icon) {
+    case "tank": // shield
+      return (
+        <svg {...common} fill="currentColor">
+          <path d="M8 1l5.5 2v4.2c0 3.7-2.4 6-5.5 7.3C4.9 13.2 2.5 10.9 2.5 7.2V3L8 1z" />
+        </svg>
+      );
+    case "healer": // cross
+      return (
+        <svg {...common} fill="currentColor">
+          <path d="M6.3 2h3.4v4.3H14v3.4H9.7V14H6.3V9.7H2V6.3h4.3V2z" />
+        </svg>
+      );
+    case "melee": // crossed swords
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M3 3l10 10M13 3L3 13" />
+        </svg>
+      );
+    case "ranged": // arrow
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 13L13 3M13 3H8.5M13 3V7.5" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function BossTemplate({ boss }) {
   const [values, setValues] = useState({});
   const [week, setWeek] = useState("");
@@ -221,34 +267,82 @@ export default function BossTemplate({ boss }) {
               />
             )}
 
-            {boss.pins.map((pin) => (
-              <div
-                key={pin.id}
-                className={styles.pin}
-                style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
-              >
-                <span className={styles.tag} style={{ color: `var(--${pin.role}-role)` }}>
-                  {pin.tag}
-                </span>
-                {/* labelOnly pins (e.g. the boss marker, the DPS stack) are
-                    map annotations with no player name — render just the tag. */}
-                {!pin.labelOnly && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Name"
-                      aria-label={`${pin.tag} — player name`}
-                      value={values[pin.id] || ""}
-                      onChange={(e) => setValue(pin.id, e.target.value)}
-                      style={{ color: `var(--${pin.role}-role)` }}
+            {/* Leader lines connecting offset labels back to their true dot. */}
+            <svg
+              className={styles.leaders}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              {boss.pins.map((pin) => {
+                const dx = pin.labelDx || 0;
+                const dy = pin.labelDy || 0;
+                if (!dx && !dy) return null;
+                return (
+                  <line
+                    key={pin.id}
+                    x1={pin.x}
+                    y1={pin.y}
+                    x2={pin.x + dx}
+                    y2={pin.y + dy}
+                    stroke={`var(--${pin.role}-role)`}
+                    strokeWidth="1"
+                    vectorEffect="non-scaling-stroke"
+                    opacity="0.5"
+                  />
+                );
+              })}
+            </svg>
+
+            {boss.pins.map((pin) => {
+              // labelDx/labelDy (percent of image) shift a pin's LABEL away from
+              // its true spot so labels don't collide in tight stacks. When set,
+              // a small dot marks the real position and the label sits offset.
+              const dx = pin.labelDx || 0;
+              const dy = pin.labelDy || 0;
+              const offsetLabel = dx !== 0 || dy !== 0;
+              return (
+                <Fragment key={pin.id}>
+                  {offsetLabel && (
+                    <span
+                      className={styles.posDot}
+                      style={{
+                        left: `${pin.x}%`,
+                        top: `${pin.y}%`,
+                        background: `var(--${pin.role}-role)`,
+                      }}
+                      aria-hidden="true"
                     />
-                    <span className={styles.nameDisplay} style={{ color: `var(--${pin.role}-role)` }}>
-                      {values[pin.id] || ""}
+                  )}
+                  <div
+                    className={styles.pin}
+                    style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%` }}
+                  >
+                    <span className={styles.tag} style={{ color: `var(--${pin.role}-role)` }}>
+                      <RoleIcon icon={pin.icon} />
+                      {pin.tag}
                     </span>
-                  </>
-                )}
-              </div>
-            ))}
+                    {/* labelOnly pins (e.g. the boss marker, the DPS stack) are
+                        map annotations with no player name — render just the tag. */}
+                    {!pin.labelOnly && (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Name"
+                          aria-label={`${pin.tag} — player name`}
+                          value={values[pin.id] || ""}
+                          onChange={(e) => setValue(pin.id, e.target.value)}
+                          style={{ color: `var(--${pin.role}-role)` }}
+                        />
+                        <span className={styles.nameDisplay} style={{ color: `var(--${pin.role}-role)` }}>
+                          {values[pin.id] || ""}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </Fragment>
+              );
+            })}
           </div>
         </div>
 

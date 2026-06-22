@@ -5,7 +5,7 @@
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
 **Last updated:** 2026-06-21 · **Branch:** main · **Build + lint:** passing (16 routes;
-`/tk/void-reaver` verified rendering the live template, Vashj unaffected)
+`/ssc/fathom-lord-karathress` newly verified, Vashj/Void Reaver unaffected) · **3/10 bosses built**
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
 ---
@@ -25,14 +25,16 @@ React component is driven by small per-boss data files. Scope is **SSC (6 bosses
 | Shared `BossTemplate` component (pins, sidebar sync, export/save/load/clear) | ✅ Done |
 | Lady Vashj data file (reference implementation) | ✅ Done & validated |
 | Void Reaver (TK) data file | ✅ Done — WebP plate (86 KB), geometry overlay-verified, `labelOnly` markers; center cluster aligned tank→boss→DPS toward ring center |
-| Other 8 bosses | ⛔ Not started — need clean arena screenshots + pin geometry each |
+| Fathom-Lord Karathress (SSC) data file | ✅ Done — clean WebP plate (95 KB), overlay-verified to the user's actual layout: MT holds K+Sharkiss top-of-ramp, melee right, Tidalvess + tank further right, Caribdis pulled to the far-right hallway (LoS) with tank + healer, ranged/raid healers mid-ramp. 4 council + Melee/Ranged/Raid-Healer `labelOnly` markers, 3 tank + 1 healer inputs |
+| Other 7 bosses | ⛔ Not started — need clean arena screenshots + pin geometry each |
 | GitHub repo + Vercel deploy | ⏳ Repo exists; first push/deploy per `GIT_AND_DEPLOY.md` |
 | Autosave / data-loss protection | ✅ Done — per-boss localStorage, restored on load |
 | Mobile/touch usability of on-image pins | ✅ Improved — 44px sidebar targets, larger pins/inputs on mobile |
 | Export-as-image feedback | ✅ Done — button disables + shows "Exporting…" |
 
-**Progress: 2 / 10 bosses fully built.** The abstraction is proven on a second, structurally
-different boss — the remaining work is content (images + geometry) plus the polish backlog below.
+**Progress: 3 / 10 bosses fully built** (Vashj, Void Reaver, Karathress). The abstraction holds
+across symmetric quadrants, a few fixed roles, and a 13-pin council fight — remaining work is
+content (images + geometry) per the recipe.
 
 ## 3. Architecture & conventions
 
@@ -180,6 +182,29 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-21** — **Karathress reworked on a clean plate.** The first finalize used the
+  marker-laden cheat-sheet screenshot (blurred center = bad) and put Caribdis on the wrong side.
+  User supplied a clean arena shot + the real positioning; re-placed all pins from that
+  description and overlay-verified: MT + K/Sharkiss top-of-ramp, melee right, Tidalvess + tank
+  further right, Caribdis at the far-right hallway with tank + healer, ranged/raid healers
+  mid-ramp. Simplified to the user's pin set — 3 tank + 1 healer inputs, plus Melee/Ranged/Raid
+  Healer group markers and the 4 council kill-order markers. Clean WebP (95 KB). Lint + build pass.
+- **2026-06-21** — **Finalized Fathom-Lord Karathress (SSC) — 3rd boss (3/10).** The provided plate
+  carried the uploader's center cheat-sheet legend (class-icon grid + boss portraits); confirmed
+  it's a legend, not spatial positions, so feathered it out (sharp radial mask) and converted to
+  **WebP (3.2 MB → 81 KB)**. Re-placed all 13 pins via a rendered overlay (with input-box
+  footprints) to the strategic layout — 3 lords clustered center-right, Caribdis pulled far
+  upper-left, MT + raid healers spaced so name boxes don't collide. Set `image` to `.webp` +
+  `imageWidth/Height`; cleared the PROVISIONAL note. Lint + build passing; Vashj/Void Reaver unaffected.
+- **2026-06-21** — Scaffolded **Fathom-Lord Karathress (SSC)**. `data/bosses/fathom-lord-karathress.js`
+  created + registered in `bossData.js` (validated against the contract). Council fight modeled as
+  4 `labelOnly` markers tagged with kill order (1·Tidalvess → 2·Sharkiss → 3·Caribdis → 4·Karathress),
+  3 tanks (K+Sharkiss main, Tidalvess+pet, Caribdis pull-far), and 6 healers (2 main-tank, 1
+  Tidalvess, 1 Caribdis resto druid, 2 raid/float). Fight details sourced from a community **SSC
+  cheat-sheet** Google Sheet (text via the gviz CSV endpoint; the sheet's embedded arena
+  screenshots don't export that way). Pin geometry is PROVISIONAL and `imageWidth`/`imageHeight`
+  are unset — both pending the arena image on disk (`public/images/ssc/fathom-lord-karathress.<ext>`)
+  + an overlay pass. Not yet build-verified here (sandbox can't build the Windows `node_modules`).
 - **2026-06-21** — Completed remaining backlog **AST-2** + **AST-3**. Added `imageWidth`/
   `imageHeight` to the boss contract; missing-image fallback now uses the real aspect ratio.
   Map frame scales `560px → 720px` on large desktops (and down to viewport on mobile) via
