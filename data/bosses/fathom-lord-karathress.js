@@ -64,12 +64,13 @@ const karathress = {
     // the group); the rest are roster assignments only (sidebarOnly = no map pin).
     // Weighting per the video: Tidalvess tank is the heaviest (windfury + frost
     // shock), the main K+Sharkiss tank next, Caribdis's healer floats to raid.
-    { id: "heal-car", role: "green", icon: "healer", tag: "Heal", sidebarLabel: "Caribdis tank's healer (floats to raid)", x: 83.8, y: 39.3 },
-    { id: "heal-mt1", role: "green", sidebarOnly: true, sidebarLabel: "Main-tank healer 1 (K + Sharkiss)" },
-    { id: "heal-mt2", role: "green", sidebarOnly: true, sidebarLabel: "Main-tank healer 2 (K + Sharkiss)" },
-    { id: "heal-tid1", role: "green", sidebarOnly: true, sidebarLabel: "Tidalvess healer 1" },
-    { id: "heal-tid2", role: "green", sidebarOnly: true, sidebarLabel: "Tidalvess healer 2" },
-    { id: "heal-raid1", role: "green", sidebarOnly: true, sidebarLabel: "Raid / float healer" },
+    // cardLabel is the short label used in the on-image "Healers" overlay card.
+    { id: "heal-car", role: "green", icon: "healer", tag: "Heal", sidebarLabel: "Caribdis tank's healer (floats to raid)", cardLabel: "Caribdis", x: 83.8, y: 39.3 },
+    { id: "heal-mt1", role: "green", sidebarOnly: true, sidebarLabel: "Main-tank healer 1 (K + Sharkiss)", cardLabel: "MT 1" },
+    { id: "heal-mt2", role: "green", sidebarOnly: true, sidebarLabel: "Main-tank healer 2 (K + Sharkiss)", cardLabel: "MT 2" },
+    { id: "heal-tid1", role: "green", sidebarOnly: true, sidebarLabel: "Tidalvess healer 1", cardLabel: "Tidal 1" },
+    { id: "heal-tid2", role: "green", sidebarOnly: true, sidebarLabel: "Tidalvess healer 2", cardLabel: "Tidal 2" },
+    { id: "heal-raid1", role: "green", sidebarOnly: true, sidebarLabel: "Raid / float healer", cardLabel: "Raid" },
 
     // Group stack positions — map markers only (no individual name input).
     { id: "z-melee", role: "red", icon: "melee", tag: "Melee DPS", labelOnly: true, x: 61.4, y: 73.1, labelDx: 5, labelDy: 10 },
@@ -83,6 +84,19 @@ const karathress = {
     {
       id: "healers",
       title: "Healers",
+      pins: ["heal-mt1", "heal-mt2", "heal-tid1", "heal-tid2", "heal-car", "heal-raid1"],
+    },
+  ],
+
+  // On-image assignment card(s), captured in the PNG export. The grouped healers
+  // are sidebarOnly (no map pin), so this card is how their names reach the
+  // shared image. Positioned on the open floor at the left, clear of the fight.
+  overlays: [
+    {
+      id: "healers",
+      title: "Healers",
+      x: 2.5,
+      y: 30,
       pins: ["heal-mt1", "heal-mt2", "heal-tid1", "heal-tid2", "heal-car", "heal-raid1"],
     },
   ],

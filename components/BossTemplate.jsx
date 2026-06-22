@@ -363,6 +363,39 @@ export default function BossTemplate({ boss }) {
                 </Fragment>
               );
             })}
+
+            {/* On-image assignment cards — captured in the export. Display-only;
+                they mirror the sidebar values (so off-map roles still appear in
+                the shared PNG). Plain text, so always export-safe. */}
+            {boss.overlays?.map((ov) => (
+              <div
+                key={ov.id}
+                className={styles.overlayCard}
+                style={{ left: `${ov.x}%`, top: `${ov.y}%` }}
+              >
+                <div className={styles.overlayTitle}>{ov.title}</div>
+                {ov.pins.map((pinId) => {
+                  const pin = pinById[pinId];
+                  if (!pin) return null;
+                  return (
+                    <div className={styles.overlayRow} key={pinId}>
+                      <span
+                        className={styles.overlayDot}
+                        style={{ background: `var(--${pin.role}-role)` }}
+                      />
+                      <span className={styles.overlayLabel}>
+                        {pin.cardLabel || pin.sidebarLabel}
+                      </span>
+                      <span
+                        className={`${styles.overlayName} ${values[pinId] ? "" : styles.overlayEmpty}`}
+                      >
+                        {values[pinId] || "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

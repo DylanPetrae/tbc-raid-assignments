@@ -4,8 +4,8 @@
 > Update it as work lands. `project_handoff_summary.md` is the frozen original brief (don't edit that);
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
-**Last updated:** 2026-06-21 · **Branch:** main · **Build + lint:** passing (16 routes;
-`/ssc/fathom-lord-karathress` newly verified, Vashj/Void Reaver unaffected) · **3/10 bosses built**
+**Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes;
+Karathress healer overlay card + export-safe leader colors added) · **3/10 bosses built**
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
 ---
@@ -75,8 +75,8 @@ app/globals.css          theme tokens (--accent-fel, --*-role colors, etc.)
 ### Per-boss data shape (contract)
 `{ slug, name, raidShort, subtitle, image, imageAlt, imageWidth, imageHeight,
 roles[{key,name,desc}],
-pins[{id, role, tag, sidebarLabel, x, y, labelOnly?, icon?, labelDx?, labelDy?, sidebarOnly?}],
-groups[{id, title, pins[]}], notes?[{heading, items[]}] }`
+pins[{id, role, tag, sidebarLabel, x, y, labelOnly?, icon?, labelDx?, labelDy?, sidebarOnly?, cardLabel?}],
+groups[{id, title, pins[]}], notes?[{heading, items[]}], overlays?[{id, title, x, y, pins[]}] }`
 `imageWidth`/`imageHeight` are the source image's pixel dimensions — record them when
 adding a boss (they drive the missing-image fallback's shape; pin x/y stay as %).
 Role `key` must map to a `--<key>-role` CSS var in `globals.css`
@@ -94,10 +94,17 @@ Optional pin fields (all additive — absent on normal pins, so older bosses are
   positions stay accurate while crowded labels stay readable.
 - **`sidebarOnly: true`** (Karathress) — a roster assignment with **no** map pin (e.g. floating
   healers). Appears in the sidebar via `groups` but is skipped on the map; needs no `x`/`y`.
+- **`cardLabel`** (Karathress) — short label used for a pin's row in an on-image `overlays` card
+  (falls back to `sidebarLabel`). Keeps the compact card readable.
 
 `notes` (optional, Karathress) is an array of `{heading, items[]}` sections rendered in an on-page
 **Fight Notes & Priorities** panel below the map + assignments — for kill order, mechanics, opener,
 tank/healer tips, etc.
+
+`overlays` (optional, Karathress) is an array of on-image assignment cards `{id, title, x, y%, pins[]}`
+rendered **inside the export frame** (so they appear in the shared PNG). Each card lists its pins as
+`cardLabel → typed name` rows, display-only and synced to the sidebar. This is how `sidebarOnly`
+roles (e.g. grouped healers) reach the exported image; empty rows show a faint dash.
 
 ## 4. Roadmap
 
@@ -194,6 +201,13 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-22** — **On-image assignment cards (`overlays`) + export-safe leader colors.** Added a
+  generic `overlays` template feature: positioned cards rendered inside the export frame, listing
+  `cardLabel → typed name` rows (display-only, synced to the sidebar) so `sidebarOnly` roles reach
+  the shared PNG. Wired a "Healers" card onto Karathress (upper-left) — the 6 healers now show in the
+  export, empty rows as a faint dash. Also resolved role CSS vars to literals so the leader-line
+  colors survive html2canvas export. Relocated dev reference screenshots out of `public/`. Lint +
+  build passing; all pushed.
 - **2026-06-21** — **Karathress: precise placement + 3 new template features.** Detected exact pin
   positions from the user's annotated reference (`fathom-lord-karathress-positions.png`, color blobs
   → %), fixing the layout. Root issue was label collision in the stacked bottom group, so added
