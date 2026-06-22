@@ -86,6 +86,23 @@ export default function BossTemplate({ boss }) {
       ? `${boss.imageWidth} / ${boss.imageHeight}`
       : undefined;
 
+  // Resolve each role's CSS var to a literal color. The leader-line <svg> needs
+  // this because html2canvas serializes the SVG and does NOT resolve var(--x)
+  // inside it, so var()-stroked lines would drop out of the exported PNG. On
+  // screen the var() fallback below is fine; this just makes export faithful.
+  const [roleColors, setRoleColors] = useState({});
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const map = {};
+    for (const p of boss.pins) {
+      if (!map[p.role]) map[p.role] = cs.getPropertyValue(`--${p.role}-role`).trim();
+    }
+    setRoleColors(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boss.slug]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // Restore the last fill for this boss from localStorage on mount. Officers
   // type ~13 names per week; a refresh or stray back-button must not wipe them.
   // This deliberately sets state after mount (not via a useState initializer)
@@ -285,7 +302,7 @@ export default function BossTemplate({ boss }) {
                     y1={pin.y}
                     x2={pin.x + dx}
                     y2={pin.y + dy}
-                    stroke={`var(--${pin.role}-role)`}
+                    stroke={roleColors[pin.role] || `var(--${pin.role}-role)`}
                     strokeWidth="1"
                     vectorEffect="non-scaling-stroke"
                     opacity="0.5"
