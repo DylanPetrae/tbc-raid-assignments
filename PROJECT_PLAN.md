@@ -8,6 +8,11 @@
 Morogrim Tidewalker added) · **4/10 bosses built**
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
 
+> **Next step (2026-06-22):** Morogrim is built + deployed; the user is reviewing the latest
+> label positions on the live page (Main Tank under the portrait at x73, Add Tank label
+> down-left with a leader line). Awaiting their confirmation / any final nudges. After that,
+> the next boss is Solarian (TK) or another from the remaining 6, via the recipe in §3.
+
 ---
 
 ## 1. What this is
@@ -66,6 +71,11 @@ app/globals.css          theme tokens (--accent-fel, --*-role colors, etc.)
 2. **Inspect the image before placing pins** — find the platform center and named landmarks;
    compute pin `x`/`y` as % of image dimensions. Do **not** eyeball percentages
    (carry-forward lesson from Vashj). Verify with a rendered overlay before calling it done.
+   **When the user provides an annotated reference, detect marker positions by color/blob
+   centroid (a `sharp` raw-pixel pass), not by eye** — eyeballing % off downscaled crops is
+   unreliable (Morogrim's boss portrait was misread ~6% left repeatedly until color-detected at
+   x≈73). The dungeon's braziers/card borders pollute simple thresholds, so use tight,
+   marker-specific color tests + connected-component blobs.
 3. Confirm the quadrant/letter labels against the user's *actual* raid callouts, not a default.
 4. Create `data/bosses/<slug>.js` following the `lady-vashj.js` shape.
 5. Register it in `data/bossData.js`. That's the only switch — `bosses.js` derives the boss's
