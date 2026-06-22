@@ -45,11 +45,12 @@ const morogrim = {
     { id: "grave3", role: "red", tag: "Grave", labelOnly: true, x: 41, y: 31 },
     { id: "grave4", role: "red", tag: "Grave", labelOnly: true, x: 46, y: 15 },
 
-    // Tanks (fillable). Main tank sits centered below Morogrim's portrait; the
-    // add tank's label is offset up-right off the portrait (noLeader = no line,
-    // since its name box would otherwise sit on top of the connector).
-    { id: "tank-mt", role: "blue", icon: "tank", tag: "Main Tank", sidebarLabel: "Main tank (on Morogrim)", x: 68, y: 69 },
-    { id: "tank-add", role: "blue", icon: "tank", tag: "Add Tank", sidebarLabel: "Add tank (murlocs — paladin best)", x: 73, y: 54, labelDx: 8, labelDy: -8, noLeader: true },
+    // Tanks (fillable). Main tank sits centered directly below Morogrim's
+    // portrait (~x73). The add tank stands right by the boss (dot on the
+    // portrait), so its label is offset down-left into open floor with a leader
+    // line (the line runs down to the label, clear of its name box).
+    { id: "tank-mt", role: "blue", icon: "tank", tag: "Main Tank", sidebarLabel: "Main tank (on Morogrim)", x: 73, y: 71 },
+    { id: "tank-add", role: "blue", icon: "tank", tag: "Add Tank", sidebarLabel: "Add tank (murlocs — paladin best)", x: 73, y: 54, labelDx: -15, labelDy: 12 },
 
     // Watery Grave healer (fillable) — same latitude as the far-left grave.
     { id: "heal-wg", role: "green", icon: "healer", tag: "WG Healer", sidebarLabel: "Watery Grave healer (foot of ramp)", x: 51, y: 54 },
