@@ -25,7 +25,7 @@ React component is driven by small per-boss data files. Scope is **SSC (6 bosses
 | Shared `BossTemplate` component (pins, sidebar sync, export/save/load/clear) | ✅ Done |
 | Lady Vashj data file (reference implementation) | ✅ Done & validated |
 | Void Reaver (TK) data file | ✅ Done — WebP plate (86 KB), geometry overlay-verified, `labelOnly` markers; center cluster aligned tank→boss→DPS toward ring center |
-| Fathom-Lord Karathress (SSC) data file | ✅ Done — clean WebP plate (95 KB), overlay-verified to the user's actual layout: MT holds K+Sharkiss top-of-ramp, melee right, Tidalvess + tank further right, Caribdis pulled to the far-right hallway (LoS) with tank + healer, ranged/raid healers mid-ramp. 4 council + Melee/Ranged/Raid-Healer `labelOnly` markers, 3 tank + 1 healer inputs |
+| Fathom-Lord Karathress (SSC) data file | ✅ Done — WebP plate (95 KB). Pin positions detected from the user's annotated reference (`*-positions.png`) and overlay-verified; tight bottom cluster uses `labelDx`/`labelDy` (dot + leader line) so labels stay readable. Role icons on tanks/healers/melee/ranged. Assignments: 3 tanks + 6 healers (2 main, 2 Tidalvess, 1 Caribdis on-map, 1 raid; the 5 non-Caribdis healers are `sidebarOnly`). On-page Fight Notes panel from the user's strategy video |
 | Other 7 bosses | ⛔ Not started — need clean arena screenshots + pin geometry each |
 | GitHub repo + Vercel deploy | ⏳ Repo exists; first push/deploy per `GIT_AND_DEPLOY.md` |
 | Autosave / data-loss protection | ✅ Done — per-boss localStorage, restored on load |
@@ -74,18 +74,30 @@ app/globals.css          theme tokens (--accent-fel, --*-role colors, etc.)
 
 ### Per-boss data shape (contract)
 `{ slug, name, raidShort, subtitle, image, imageAlt, imageWidth, imageHeight,
-roles[{key,name,desc}], pins[{id, role, tag, sidebarLabel, x, y, labelOnly?}],
-groups[{id, title, pins[]}] }`
+roles[{key,name,desc}],
+pins[{id, role, tag, sidebarLabel, x, y, labelOnly?, icon?, labelDx?, labelDy?, sidebarOnly?}],
+groups[{id, title, pins[]}], notes?[{heading, items[]}] }`
 `imageWidth`/`imageHeight` are the source image's pixel dimensions — record them when
 adding a boss (they drive the missing-image fallback's shape; pin x/y stay as %).
 Role `key` must map to a `--<key>-role` CSS var in `globals.css`
 (white/red/yellow/blue/green/purple/orange exist today).
-`labelOnly: true` (added for Void Reaver) makes a pin a map-only annotation — it renders just
-its tag, with **no** name input and no mirrored export span. Use it for non-player markers (the
-boss's position) or for a group position that isn't an individual assignment (the DPS stack).
-Label-only pins carry no `sidebarLabel` and are intentionally left out of `groups`, so they
-never appear in the sidebar roster. The flag is optional and absent on normal pins, so existing
-bosses (Vashj) are unaffected.
+
+Optional pin fields (all additive — absent on normal pins, so older bosses are unaffected):
+
+- **`labelOnly: true`** (Void Reaver) — map-only annotation: renders just its tag, **no** name
+  input and no mirrored export span. For non-player markers (boss position) or a group position
+  that isn't an individual assignment (DPS stack, melee/ranged zones). Left out of `groups`.
+- **`icon`** (Karathress) — generic role glyph rendered inline-SVG in the tag: `tank` (shield),
+  `healer` (cross), `melee` (crossed swords), `ranged` (arrow). Inherits the role color; export-safe.
+- **`labelDx` / `labelDy`** (Karathress) — percent offsets that shift a pin's **label** away from
+  its true spot in tight stacks. A dot marks the real position and a leader line connects them, so
+  positions stay accurate while crowded labels stay readable.
+- **`sidebarOnly: true`** (Karathress) — a roster assignment with **no** map pin (e.g. floating
+  healers). Appears in the sidebar via `groups` but is skipped on the map; needs no `x`/`y`.
+
+`notes` (optional, Karathress) is an array of `{heading, items[]}` sections rendered in an on-page
+**Fight Notes & Priorities** panel below the map + assignments — for kill order, mechanics, opener,
+tank/healer tips, etc.
 
 ## 4. Roadmap
 
@@ -97,10 +109,10 @@ fixes on `BossTemplate` so every future boss inherits them: autosave, touch sizi
 feedback. Cheaper to fix once on the shared component than to retrofit across 10 pages.
 
 **Phase 3 — Content build-out.** Add the remaining bosses one at a time via the recipe
-above. Each is mostly image-sourcing + geometry, not code. ✅ Void Reaver (TK) done as the
-second boss — a deliberately different shape from Vashj (a few fixed roles + map-only markers
-rather than symmetric quadrants), which is what surfaced the `labelOnly` addition. Remaining 8:
-suggested order is the easiest/most iconic positioning next (Karathress, Morogrim, Solarian).
+above. Each is mostly image-sourcing + geometry, not code. ✅ Void Reaver (TK) and ✅ Karathress
+(SSC) done — between them they drove the optional-pin features (`labelOnly`, `icon`, `labelDx`/
+`labelDy`, `sidebarOnly`) and the on-page `notes` panel, so future bosses inherit all of it.
+Remaining 7: suggested order is the easiest/most iconic positioning next (Morogrim, Solarian).
 
 **Phase 4 — Polish & accessibility pass.** Work the P1 backlog (active nav state, focus rings,
 labels, reduced-motion). Re-run a UX review before declaring v1 done.
@@ -182,6 +194,18 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-21** — **Karathress: precise placement + 3 new template features.** Detected exact pin
+  positions from the user's annotated reference (`fathom-lord-karathress-positions.png`, color blobs
+  → %), fixing the layout. Root issue was label collision in the stacked bottom group, so added
+  **`labelDx`/`labelDy`** (dot at the true spot + leader line, label offset) — accurate *and*
+  readable. Added **`icon`** generic role glyphs (inline-SVG tank/healer/melee/ranged, export-safe).
+  Added **`sidebarOnly`** pins so floating healers are roster assignments without a map pin. Reworked
+  healers to the user's strategy-video weighting (2 main-tank, 2 Tidalvess, 1 Caribdis on-map, 1
+  raid). Added a **`notes`** field + on-page **Fight Notes & Priorities** panel populated from the
+  video (kill order, 75% Blessing-of-the-Tides rule, opener MDs, tank/healer tips). All five new
+  fields are optional/additive — Vashj + Void Reaver unaffected. Shared `BossTemplate.jsx` +
+  `.module.css` touched; not build-verified in this env (run `npm run build` locally; mind the
+  parallel Code session on the same files).
 - **2026-06-21** — **Karathress reworked on a clean plate.** The first finalize used the
   marker-laden cheat-sheet screenshot (blurred center = bad) and put Caribdis on the wrong side.
   User supplied a clean arena shot + the real positioning; re-placed all pins from that

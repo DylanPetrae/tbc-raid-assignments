@@ -406,3 +406,45 @@
     font-size: 12.5px;
   }
 }
+
+/* Fight Notes & Priorities — reference panel below the map + assignments. */
+.notes {
+  margin-top: 22px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-fel);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.notesTitle {
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-fel);
+  margin: 0 0 12px;
+  border-bottom: 1px solid var(--border-fel);
+  padding-bottom: 8px;
+}
+.notesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px 22px;
+}
+.notesSection h3 {
+  font-family: Arial, sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-main);
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+.notesSection ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.notesSection li {
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}

@@ -295,6 +295,9 @@ export default function BossTemplate({ boss }) {
             </svg>
 
             {boss.pins.map((pin) => {
+              // sidebarOnly pins are roster assignments with no map position
+              // (e.g. floating healers) — they appear in the sidebar but not here.
+              if (pin.sidebarOnly) return null;
               // labelDx/labelDy (percent of image) shift a pin's LABEL away from
               // its true spot so labels don't collide in tight stacks. When set,
               // a small dot marks the real position and the label sits offset.
@@ -420,6 +423,24 @@ export default function BossTemplate({ boss }) {
           </div>
         </div>
       </div>
+
+      {boss.notes && boss.notes.length > 0 && (
+        <div className={styles.notes}>
+          <h2 className={styles.notesTitle}>Fight Notes &amp; Priorities</h2>
+          <div className={styles.notesGrid}>
+            {boss.notes.map((section) => (
+              <section key={section.heading} className={styles.notesSection}>
+                <h3>{section.heading}</h3>
+                <ul>
+                  {section.items.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
+      )}
 
       {undoData && (
         <div className={styles.toast} role="status">
