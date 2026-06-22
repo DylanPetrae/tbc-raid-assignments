@@ -43,23 +43,26 @@ const karathress = {
   ],
 
   // x/y are the TRUE positions detected from the user's annotated reference
-  // (references/fathom-lord-karathress-positions.png). The bottom group (tanks, council,
-  // melee) genuinely stacks in a small area, so each of those carries a
-  // labelDx/labelDy that fans its LABEL out (with a dot + leader line marking
-  // the real spot) to keep the cluster readable. The center square (ranged +
-  // raid healers) and the lone Caribdis healer aren't crowded, so no offset.
+  // (references/fathom-lord-karathress-positions.png). The bottom group (tanks,
+  // council, melee) genuinely stacks in a small area, so each of those carries a
+  // SMALL labelDx/labelDy that nudges its MARKER out of the pile (a dot + leader
+  // line mark the real spot). These are re-tuned much smaller than the old
+  // wide-label fan-out — a dot + 2-char badge needs only a fraction of the nudge.
+  // The far-right Caribdis pair is also pulled left so the markers don't clip the
+  // frame edge. The center square (ranged + raid healers) and the lone Caribdis
+  // healer aren't crowded, so no offset.
   pins: [
     // Council members — map markers only (no name input). mapKey = kill order, so
     // the marker badge reads 1–4 (matching the tag) instead of an auto "C#".
-    { id: "m-karathress", role: "purple", mapKey: "4", tag: "4 · Karathress", labelOnly: true, x: 57, y: 76.5, labelDx: -4, labelDy: 10 },
-    { id: "m-sharkiss", role: "purple", mapKey: "2", tag: "2 · Sharkiss", labelOnly: true, x: 56.8, y: 68.6, labelDx: -10, labelDy: -6 },
-    { id: "m-tidalvess", role: "purple", mapKey: "1", tag: "1 · Tidalvess", labelOnly: true, x: 65.3, y: 72.2, labelDx: 2, labelDy: -8 },
-    { id: "m-caribdis", role: "purple", mapKey: "3", tag: "3 · Caribdis", labelOnly: true, x: 97, y: 49, labelDx: -12, labelDy: -1 },
+    { id: "m-karathress", role: "purple", mapKey: "4", tag: "4 · Karathress", labelOnly: true, x: 57, y: 76.5, labelDx: -2, labelDy: 4 },
+    { id: "m-sharkiss", role: "purple", mapKey: "2", tag: "2 · Sharkiss", labelOnly: true, x: 56.8, y: 68.6, labelDx: -3, labelDy: -4 },
+    { id: "m-tidalvess", role: "purple", mapKey: "1", tag: "1 · Tidalvess", labelOnly: true, x: 65.3, y: 72.2, labelDx: -1, labelDy: -5 },
+    { id: "m-caribdis", role: "purple", mapKey: "3", tag: "3 · Caribdis", labelOnly: true, x: 97, y: 49, labelDx: -6, labelDy: -2 },
 
     // Tanks (fillable)
-    { id: "tank-ks", role: "blue", icon: "tank", tag: "MT", sidebarLabel: "Karathress + Sharkiss tank", x: 53, y: 75, labelDx: -9, labelDy: 2 },
-    { id: "tank-tid", role: "blue", icon: "tank", tag: "Tank", sidebarLabel: "Tidalvess tank", x: 69.2, y: 71.7, labelDx: 9, labelDy: 3 },
-    { id: "tank-car", role: "blue", icon: "tank", tag: "Tank", sidebarLabel: "Caribdis tank (far-right hallway)", x: 97.4, y: 58, labelDx: -10, labelDy: 3 },
+    { id: "tank-ks", role: "blue", icon: "tank", tag: "MT", sidebarLabel: "Karathress + Sharkiss tank", x: 53, y: 75, labelDx: -4, labelDy: 1 },
+    { id: "tank-tid", role: "blue", icon: "tank", tag: "Tank", sidebarLabel: "Tidalvess tank", x: 69.2, y: 71.7, labelDx: 5, labelDy: 1 },
+    { id: "tank-car", role: "blue", icon: "tank", tag: "Tank", sidebarLabel: "Caribdis tank (far-right hallway)", x: 97.4, y: 58, labelDx: -7, labelDy: 1 },
 
     // Healers. Only Caribdis's healer has a map position (she's pulled away from
     // the group); the rest are roster assignments only (sidebarOnly = no map pin).
@@ -74,7 +77,7 @@ const karathress = {
     { id: "heal-raid1", role: "green", sidebarOnly: true, sidebarLabel: "Raid / float healer", cardLabel: "Raid" },
 
     // Group stack positions — map markers only (no individual name input).
-    { id: "z-melee", role: "red", icon: "melee", tag: "Melee DPS", labelOnly: true, x: 61.4, y: 73.1, labelDx: 5, labelDy: 10 },
+    { id: "z-melee", role: "red", icon: "melee", tag: "Melee DPS", labelOnly: true, x: 61.4, y: 73.1, labelDx: 2, labelDy: 6 },
     { id: "z-ranged", role: "orange", icon: "ranged", tag: "Ranged DPS", labelOnly: true, x: 57, y: 44 },
     { id: "z-raidheal", role: "green", icon: "healer", tag: "Raid Healers", labelOnly: true, x: 64, y: 49.5 },
   ],

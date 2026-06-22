@@ -12,12 +12,12 @@ panel + linked highlight + two export modes (see `MAP_PANEL_REDESIGN_HANDOFF.md`
 > **Next step (2026-06-22):** Map redesign **v2** implemented — a **replace**, not an add: the map
 > shows **markers only** (role dot + icon + key badge) on every viewport, all names in the **docked,
 > collapsible** panel, bidirectional tap-highlight, and two export modes (map+key default /
-> names-on-map). The v1 desktop label layer + the floating `overlays` card were **removed**;
-> `labelDx`/`labelDy` are now no-ops. Build + lint pass; static renders verified at desktop + 375px
-> (single representation, no on-map text; Karathress's council/tank cluster is tight but legible —
-> worth an eyeball). **Still needs a human click-pass:** tap-highlight linking + the export PNGs in
-> both modes (no browser driver to automate). After sign-off, next boss is Solarian (TK) or another
-> of the remaining 6, via §3.
+> names-on-map). The v1 desktop label layer + the floating `overlays` card were **removed**.
+> `labelDx`/`labelDy` were **repurposed as small marker-declutter offsets** (leader line → true-spot
+> dot) and re-tuned smaller; Karathress's council/tank cluster and Morogrim's Add-Tank/Melee pair
+> now separate cleanly (verified via rendered screenshots). User confirmed tap-highlight + both
+> export modes work. **Open:** a final eyeball of the decluttered clusters in the browser. After
+> sign-off, next boss is Solarian (TK) or another of the remaining 6, via §3.
 
 ---
 
@@ -115,8 +115,11 @@ Optional pin fields (all additive — absent on normal pins, so older bosses are
   for kill order). Pins with `mapKey` are excluded from auto letter-indexing.
 - **Role `keyLetter`** — overrides the badge letter derived for that role (default = role `name`'s
   first letter, uppercased). The escape hatch if two roles would otherwise share a letter.
-- **`labelDx` / `labelDy` / `noLeader`** — **deprecated no-ops** as of the v2 redesign (the on-map
-  label layer they positioned was removed). Parsed-but-ignored for back-compat; safe to leave or strip.
+- **`labelDx` / `labelDy`** — **marker declutter offsets** (% of image). Default 0 = marker sits on
+  its true spot. When a tight cluster collides, a small offset nudges the **marker** out of the pile
+  with a thin leader line back to a dot at the true position (accuracy preserved). Re-tuned *much*
+  smaller than the old wide-label fan-out — a dot + 2-char badge needs only a fraction of the nudge.
+  (`noLeader` is currently ignored — the leader is always drawn for an offset marker.)
 
 ### Single-representation map + key badges (2026-06-22 v2 redesign)
 Per `MAP_PANEL_REDESIGN_HANDOFF.md` (v2): exactly **one** representation of a pin on the map (a
@@ -125,7 +128,9 @@ any viewport. If a pin ever shows both a label and a marker, that's the bug v2 f
 - **Marker layer** (the only on-map content, every viewport): each non-`sidebarOnly` pin is a small
   role-colored marker — dot + `icon` + a **key badge** — with a ≥44px tap hit box. **Key badge** =
   role's `keyLetter` (or role `name` initial), indexed (1,2,3…) only when a letter has >1 on-map
-  member; `mapKey` overrides (council = kill order 1–4).
+  member; `mapKey` overrides (council = kill order 1–4). Genuinely stacked spots are separated with
+  small per-pin `labelDx`/`labelDy` marker offsets + a leader line to a true-spot dot (manual, not
+  auto — see the field docs above).
 - **Docked panel** holds every fillable assignment (key badge + role dot/icon + `sidebarLabel` +
   name input), grouped by `groups`, beside the map (wide) / below it (narrow). **Collapsible** to
   reveal the whole map. Never a floating on-map overlay (the old `overlays` card was removed).
@@ -247,6 +252,14 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-22** — **Marker decluttering (v2 follow-up).** At true positions the markers in dense
+  fights overlapped (Karathress's Tidalvess sat under Melee + T2). Per the handoff's new "Crowded
+  markers" section, **repurposed `labelDx`/`labelDy` as marker offsets**: an offset nudges the marker
+  off its true spot with a thin leader line back to a small true-spot dot (re-added `.leaders` +
+  `.posDot`). Default 0; manual per-pin, not auto. Re-tuned Karathress (council/tanks/melee — much
+  smaller than the old wide-label values; far-right Caribdis pair also pulled in off the frame edge)
+  and Morogrim (Add-Tank/Melee). names-on-map export paints names at the offset marker position.
+  Verified via rendered screenshots — clusters now legible. Build + lint pass.
 - **2026-06-22** — **Map redesign v2: single-representation markers-only map** (per
   `MAP_PANEL_REDESIGN_HANDOFF.md` v2, which superseded v1). v1 layered the new markers *on top of*
   the old on-map text labels + name inputs, so each pin showed ~4 things at once — the busyness the

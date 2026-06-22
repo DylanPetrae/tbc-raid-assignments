@@ -408,35 +408,76 @@ export default function BossTemplate({ boss }) {
               {/* MARKER LAYER — the SINGLE on-map representation of a pin, on
                   every viewport: a tappable role-colored dot + icon + key badge.
                   No on-map text labels or name inputs (those live only in the
-                  panel) — see MAP_PANEL_REDESIGN_HANDOFF.md (v2). */}
+                  panel) — see MAP_PANEL_REDESIGN_HANDOFF.md (v2).
+                  When a marker would collide in a tight cluster, labelDx/labelDy
+                  (% of image) nudge the MARKER off its true spot; a small dot marks
+                  the real position and a leader line connects the two. Default 0. */}
               <div className={styles.markerLayer}>
+                <svg
+                  className={styles.leaders}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {boss.pins.map((pin) => {
+                    if (pin.sidebarOnly) return null;
+                    const dx = pin.labelDx || 0;
+                    const dy = pin.labelDy || 0;
+                    if (!dx && !dy) return null;
+                    return (
+                      <line
+                        key={pin.id}
+                        x1={pin.x}
+                        y1={pin.y}
+                        x2={pin.x + dx}
+                        y2={pin.y + dy}
+                        stroke={roleColor(pin.role)}
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0.55"
+                      />
+                    );
+                  })}
+                </svg>
+
                 {boss.pins.map((pin) => {
                   if (pin.sidebarOnly) return null;
                   const color = roleColor(pin.role);
                   const badge = badges[pin.id];
                   const isActive = activeId === pin.id;
+                  const dx = pin.labelDx || 0;
+                  const dy = pin.labelDy || 0;
+                  const offset = dx !== 0 || dy !== 0;
                   return (
-                    <button
-                      key={pin.id}
-                      type="button"
-                      className={`${styles.marker} ${isActive ? styles.markerActive : ""}`}
-                      style={{ left: `${pin.x}%`, top: `${pin.y}%`, borderColor: color }}
-                      aria-pressed={isActive}
-                      aria-label={`${badge ? badge + " · " : ""}${pin.tag || pin.sidebarLabel || pin.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleActive(pin.id);
-                      }}
-                    >
-                      <span className={styles.markerDot} style={{ background: color }}>
-                        <RoleIcon icon={pin.icon} />
-                      </span>
-                      {badge && (
-                        <span className={styles.markerBadge} style={{ color }}>
-                          {badge}
-                        </span>
+                    <Fragment key={pin.id}>
+                      {offset && (
+                        <span
+                          className={styles.posDot}
+                          style={{ left: `${pin.x}%`, top: `${pin.y}%`, background: color }}
+                          aria-hidden="true"
+                        />
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        className={`${styles.marker} ${isActive ? styles.markerActive : ""}`}
+                        style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%`, borderColor: color }}
+                        aria-pressed={isActive}
+                        aria-label={`${badge ? badge + " · " : ""}${pin.tag || pin.sidebarLabel || pin.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleActive(pin.id);
+                        }}
+                      >
+                        <span className={styles.markerDot} style={{ background: color }}>
+                          <RoleIcon icon={pin.icon} />
+                        </span>
+                        {badge && (
+                          <span className={styles.markerBadge} style={{ color }}>
+                            {badge}
+                          </span>
+                        )}
+                      </button>
+                    </Fragment>
                   );
                 })}
               </div>
@@ -454,8 +495,8 @@ export default function BossTemplate({ boss }) {
                       key={pin.id}
                       className={styles.exportName}
                       style={{
-                        left: `${pin.x}%`,
-                        top: `${pin.y}%`,
+                        left: `${pin.x + (pin.labelDx || 0)}%`,
+                        top: `${pin.y + (pin.labelDy || 0)}%`,
                         color: roleColor(pin.role),
                       }}
                     >

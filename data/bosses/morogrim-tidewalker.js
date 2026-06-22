@@ -50,13 +50,13 @@ const morogrim = {
     // portrait), so its label is offset down-left into open floor with a leader
     // line (the line runs down to the label, clear of its name box).
     { id: "tank-mt", role: "blue", icon: "tank", tag: "Main Tank", sidebarLabel: "Main tank (on Morogrim)", x: 73, y: 71 },
-    { id: "tank-add", role: "blue", icon: "tank", tag: "Add Tank", sidebarLabel: "Add tank (murlocs — paladin best)", x: 73, y: 50, labelDx: -15, labelDy: 12 },
+    { id: "tank-add", role: "blue", icon: "tank", tag: "Add Tank", sidebarLabel: "Add tank (murlocs — paladin best)", x: 73, y: 50, labelDx: 3, labelDy: -3 },
 
     // Watery Grave healer (fillable) — same latitude as the far-left grave.
     { id: "heal-wg", role: "green", icon: "healer", tag: "WG Healer", sidebarLabel: "Watery Grave healer (foot of ramp)", x: 51, y: 54 },
 
     // Group stack positions — map markers only.
-    { id: "z-melee", role: "yellow", icon: "melee", tag: "Melee DPS", labelOnly: true, x: 69, y: 50, labelDx: -3, labelDy: -7 },
+    { id: "z-melee", role: "yellow", icon: "melee", tag: "Melee DPS", labelOnly: true, x: 69, y: 50, labelDx: -4, labelDy: 0 },
     { id: "z-raid", role: "orange", icon: "ranged", tag: "Ranged + Healers", labelOnly: true, x: 72, y: 37 },
   ],
 

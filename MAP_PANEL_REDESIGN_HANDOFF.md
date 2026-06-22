@@ -20,9 +20,9 @@ Spec for a Claude Code session. Read `PROJECT_PLAN.md` first (§3 contract, §6 
 ## What to REMOVE from the current component
 - The on-map text tag rendering for pins (the `.tag` text on the map) — markers replace it.
 - The on-map name `<input>` / `.nameDisplay` (move name entry entirely to the panel).
-- The `labelDx`/`labelDy` leader-line + offset rendering and the `.posDot`/`.leaders` machinery —
-  no longer needed once labels are off the map. Leave the data fields parsed-but-ignored for back-
-  compat; you may strip them from `data/bosses/fathom-lord-karathress.js`.
+- The old wide-label fan-out is gone, BUT keep the `labelDx`/`labelDy` + leader-line + true-spot-dot
+  mechanism — it is **repurposed to declutter crowded markers** (see "Crowded markers" below). Don't
+  delete `.posDot`/`.leaders`; reuse them for markers.
 
 ## Markers (on the map)
 Per positioned pin: a tap-target (≥44px hit area, dot can be smaller) containing the role-colored
@@ -39,6 +39,21 @@ dot, the role `icon` inline-SVG if present, and the **key badge** text.
 - `labelOnly` markers (boss position, DPS/melee/ranged zones, Vashj generators) stay on the map as
   markers but have **no panel row** (they're not in `groups`). The council keeps its existing
   **kill-order number** as its badge (1–4) — don't renumber it into the role scheme.
+
+### Crowded markers (decluttering)
+Markers are small, so most bosses need no separation — but genuinely stacked spots (Karathress's
+council cluster) still overlap. Handle it with **manual per-pin offsets**, not an auto-layout:
+- Reuse **`labelDx`/`labelDy`** to nudge the **marker** off its true spot, with a thin **leader
+  line** from the nudged marker back to a small dot at the true position (so positional accuracy is
+  preserved — the dot is "where you stand", the marker is just moved out for legibility).
+- **Default is 0** (marker sits exactly on the true spot). Only the handful of pins that actually
+  collide get an offset.
+- **Re-tune the values smaller than the old ones.** The existing Karathress `labelDx`/`labelDy`
+  were sized to fan out wide *text labels*; a dot + 2-char badge needs only a fraction of that
+  nudge. Re-tune against a rendered overlay; don't paste the old magnitudes.
+- Chosen over automatic declutter on purpose: this is a curated ~10-boss set where only one or two
+  fights are dense, so deterministic hand-tuning beats an algorithm that can fight the intended
+  layout. (If the boss count ever grows a lot, this can later become auto-default + manual override.)
 
 ## Panel (the assignments)
 - **Docked, never a floating overlay.** Beside the map on wide screens, below it on narrow screens
@@ -67,8 +82,9 @@ dot, the role `icon` inline-SVG if present, and the **key badge** text.
 
 ## Backward compatibility
 - `icon`, `sidebarOnly`, `notes` stay valid and used. `labelOnly` markers still render (map-only).
-- `labelDx`/`labelDy` become no-ops (parsed, ignored). Vashj / Void Reaver / Karathress must all
-  still render and export correctly.
+- `labelDx`/`labelDy` are **kept and repurposed** as marker declutter offsets (see "Crowded
+  markers"); re-tune Karathress's smaller. Vashj / Void Reaver / Karathress must all still render
+  and export correctly.
 
 ## Acceptance criteria
 - No pin ever shows both a text label and a marker. No overlapping text on the map at any viewport
