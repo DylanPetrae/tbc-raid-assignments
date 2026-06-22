@@ -294,7 +294,10 @@ export default function BossTemplate({ boss }) {
               {boss.pins.map((pin) => {
                 const dx = pin.labelDx || 0;
                 const dy = pin.labelDy || 0;
-                if (!dx && !dy) return null;
+                // noLeader: offset the label but draw no connector line. Used for
+                // fillable pins whose name box would otherwise sit on top of the
+                // line (the line ends at the block center, behind the input box).
+                if ((!dx && !dy) || pin.noLeader) return null;
                 return (
                   <line
                     key={pin.id}

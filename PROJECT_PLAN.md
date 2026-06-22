@@ -93,6 +93,9 @@ Optional pin fields (all additive — absent on normal pins, so older bosses are
 - **`labelDx` / `labelDy`** (Karathress) — percent offsets that shift a pin's **label** away from
   its true spot in tight stacks. A dot marks the real position and a leader line connects them, so
   positions stay accurate while crowded labels stay readable.
+- **`noLeader: true`** (Morogrim) — with `labelDx`/`labelDy`, draw the offset label + dot but **no**
+  connector line. For fillable pins whose name-input box would otherwise sit on top of the line
+  (the line ends at the label block's center, behind the box).
 - **`sidebarOnly: true`** (Karathress) — a roster assignment with **no** map pin (e.g. floating
   healers). Appears in the sidebar via `groups` but is skipped on the map; needs no `x`/`y`.
 - **`cardLabel`** (Karathress) — short label used for a pin's row in an on-image `overlays` card
