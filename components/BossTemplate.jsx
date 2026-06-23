@@ -77,6 +77,10 @@ export default function BossTemplate({ boss }) {
   const [capture, setCapture] = useState(null);
   // The pin currently highlighted by a marker/panel tap (links the two layers).
   const [activeId, setActiveId] = useState(null);
+  // A whole roster group highlighted via a zone letter / group header (links a
+  // quadrant to all its markers). Tap is persistent; hover is a desktop preview.
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [hoverGroup, setHoverGroup] = useState(null);
   // Preferred export composition: "mapkey" (clean markers + a key panel) or
   // "names" (names painted on the map). Persisted per browser like other prefs.
   const [exportMode, setExportMode] = useState("mapkey");
@@ -156,6 +160,24 @@ export default function BossTemplate({ boss }) {
   // key under "Map markers" rather than as fillable assignment rows.
   const zonePins = useMemo(() => boss.pins.filter((p) => p.labelOnly), [boss]);
 
+  // pin id → its roster group id, so highlighting a quadrant can light up all of
+  // that group's markers.
+  const groupByPin = useMemo(() => {
+    const m = {};
+    for (const g of boss.groups) for (const id of g.pins) m[id] = g.id;
+    return m;
+  }, [boss]);
+
+  // Roster groups that a zone letter links to — only these group headers become
+  // interactive highlight triggers (bosses without `zones` are unaffected).
+  const zoneGroupIds = useMemo(
+    () => new Set((boss.zones || []).map((z) => z.group).filter(Boolean)),
+    [boss]
+  );
+
+  // The group currently emphasized: hover (desktop preview) wins over a tap.
+  const groupHighlight = hoverGroup || activeGroup;
+
   // Resolve each role's CSS var to a literal color. html2canvas does NOT resolve
   // var(--x) inside serialized SVG (leader lines) and is more reliable with
   // literals on the marker/badge fills too, so we compute literals once on mount.
@@ -222,7 +244,11 @@ export default function BossTemplate({ boss }) {
   // Clear the active highlight on Escape.
   useEffect(() => {
     function onKey(e) {
-      if (e.key === "Escape") setActiveId(null);
+      if (e.key === "Escape") {
+        setActiveId(null);
+        setActiveGroup(null);
+        setHoverGroup(null);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -243,6 +269,20 @@ export default function BossTemplate({ boss }) {
 
   function toggleActive(id) {
     setActiveId((cur) => (cur === id ? null : id));
+    // A single-marker highlight and a whole-quadrant highlight are mutually
+    // exclusive, so picking one clears the other.
+    setActiveGroup(null);
+  }
+
+  function toggleGroup(id) {
+    setActiveGroup((cur) => (cur === id ? null : id));
+    setActiveId(null);
+  }
+
+  function clearHighlights() {
+    setActiveId(null);
+    setActiveGroup(null);
+    setHoverGroup(null);
   }
 
   function setValue(id, val) {
@@ -346,7 +386,7 @@ export default function BossTemplate({ boss }) {
     const { default: html2canvas } = await import("html2canvas");
     // Drop any active highlight so the pulse/ring isn't baked into the PNG, and
     // switch the frame into the chosen capture mode (labels vs. key panel).
-    setActiveId(null);
+    clearHighlights();
     setCapture(exportMode);
     // Let the capture classes apply (label layer / key panel toggle) before shot.
     await new Promise((resolve) => setTimeout(resolve, 60));
@@ -383,7 +423,7 @@ export default function BossTemplate({ boss }) {
           <div ref={exportRootRef} className={`${styles.exportRoot} ${captureClass}`}>
             <div
               className={styles.mapFrame}
-              onClick={() => setActiveId(null)}
+              onClick={clearHighlights}
             >
               {imgError ? (
                 <div
@@ -403,6 +443,38 @@ export default function BossTemplate({ boss }) {
                   alt={boss.imageAlt || `${boss.name} platform diagram`}
                   onError={() => setImgError(true)}
                 />
+              )}
+
+              {/* ZONE LAYER — large faint watermark letters for named arena
+                  areas (e.g. Vashj's P2 quadrants A–D). Layered ABOVE the image
+                  but BELOW the markers (z-index between them) and part of the
+                  captured node, so it shows in both export modes. aria-hidden:
+                  the roster group headings already name each area for AT; these
+                  letters are a visual + pointer affordance only (so they are not
+                  keyboard-focusable — the group-header button is the a11y path).
+                  Hover/tap a letter to highlight its quadrant's markers. */}
+              {boss.zones && boss.zones.length > 0 && (
+                <div className={styles.zoneLayer} aria-hidden="true">
+                  {boss.zones.map((zone) => {
+                    const emphasized =
+                      zone.group && groupHighlight === zone.group;
+                    return (
+                      <span
+                        key={zone.id}
+                        className={`${styles.zoneLabel} ${emphasized ? styles.zoneLabelActive : ""}`}
+                        style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (zone.group) toggleGroup(zone.group);
+                        }}
+                        onMouseEnter={() => zone.group && setHoverGroup(zone.group)}
+                        onMouseLeave={() => setHoverGroup(null)}
+                      >
+                        {zone.label}
+                      </span>
+                    );
+                  })}
+                </div>
               )}
 
               {/* MARKER LAYER — the SINGLE on-map representation of a pin, on
@@ -445,6 +517,12 @@ export default function BossTemplate({ boss }) {
                   const color = roleColor(pin.role);
                   const badge = badges[pin.id];
                   const isActive = activeId === pin.id;
+                  // Lit (lighter than a single-tap pulse) when its quadrant is
+                  // highlighted via a zone letter / group header.
+                  const isGroupActive =
+                    !isActive &&
+                    groupHighlight &&
+                    groupByPin[pin.id] === groupHighlight;
                   const dx = pin.labelDx || 0;
                   const dy = pin.labelDy || 0;
                   const offset = dx !== 0 || dy !== 0;
@@ -459,7 +537,7 @@ export default function BossTemplate({ boss }) {
                       )}
                       <button
                         type="button"
-                        className={`${styles.marker} ${isActive ? styles.markerActive : ""}`}
+                        className={`${styles.marker} ${isActive ? styles.markerActive : ""} ${isGroupActive ? styles.markerGroupActive : ""}`}
                         style={{ left: `${pin.x + dx}%`, top: `${pin.y + dy}%`, borderColor: color }}
                         aria-pressed={isActive}
                         aria-label={`${badge ? badge + " · " : ""}${pin.tag || pin.sidebarLabel || pin.id}`}
@@ -647,7 +725,21 @@ export default function BossTemplate({ boss }) {
             {rosterOpen &&
               boss.groups.map((group) => (
               <div className={styles.quadBlock} key={group.id}>
-                <div className={styles.quadTitle}>{group.title}</div>
+                {zoneGroupIds.has(group.id) ? (
+                  <button
+                    type="button"
+                    className={`${styles.quadTitle} ${styles.quadTitleBtn} ${activeGroup === group.id ? styles.quadTitleActive : ""}`}
+                    aria-pressed={activeGroup === group.id}
+                    aria-label={`Highlight ${group.title} on the map`}
+                    onClick={() => toggleGroup(group.id)}
+                    onMouseEnter={() => setHoverGroup(group.id)}
+                    onMouseLeave={() => setHoverGroup(null)}
+                  >
+                    {group.title}
+                  </button>
+                ) : (
+                  <div className={styles.quadTitle}>{group.title}</div>
+                )}
                 {group.pins.map((pinId) => {
                   const pin = pinById[pinId];
                   const fieldId = `sidebar-${pinId}`;

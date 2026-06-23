@@ -46,6 +46,19 @@ const vashj = {
     { id: "quad-c", title: "Quadrant C", pins: ["c1", "c2", "ch"] },
     { id: "quad-d", title: "Quadrant D", pins: ["d1", "d2", "dh"] },
   ],
+
+  // Faint watermark letters marking the four P2 quadrants the platform's red
+  // dividers cut it into. Centroids are the wedge bisectors at ~0.55 of the
+  // platform radius (geometry-derived against lady-vashj.jpg + a rendered
+  // overlay — not eyeballed), so each letter sits mid-quadrant, clear of the
+  // dividers and the center. `group` links each letter to its roster group so
+  // hovering/tapping it highlights that quadrant's markers.
+  zones: [
+    { id: "zone-a", label: "A", x: 55.7, y: 36.5, group: "quad-a" },
+    { id: "zone-b", label: "B", x: 71.1, y: 53.1, group: "quad-b" },
+    { id: "zone-c", label: "C", x: 41.0, y: 62.0, group: "quad-c" },
+    { id: "zone-d", label: "D", x: 25.3, y: 44.9, group: "quad-d" },
+  ],
 };
 
 export default vashj;

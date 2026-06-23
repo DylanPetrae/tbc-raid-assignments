@@ -4,7 +4,7 @@
 > Update it as work lands. `project_handoff_summary.md` is the frozen original brief (don't edit that);
 > `GIT_AND_DEPLOY.md` is the deploy runbook. This file supersedes both for "what's true now / what's next."
 
-**Last updated:** 2026-06-22 · **Branch:** main · **Build + lint:** passing (16 routes)
+**Last updated:** 2026-06-23 · **Branch:** main · **Build + lint:** passing (16 routes)
 · **4/10 bosses built** · **Map redesign v2 landed** — markers-only map + docked collapsible
 panel + linked highlight + two export modes (see `MAP_PANEL_REDESIGN_HANDOFF.md` v2)
 · **Backlog cleared** — P0/P1/P2 + AST-1/2/3 done; only TD-3 (html2canvas swap) deferred by design
@@ -93,7 +93,7 @@ app/globals.css          theme tokens (--accent-fel, --*-role colors, etc.)
 `{ slug, name, raidShort, subtitle, image, imageAlt, imageWidth, imageHeight,
 roles[{key,name,desc}],
 pins[{id, role, tag, sidebarLabel, x, y, labelOnly?, icon?, labelDx?, labelDy?, sidebarOnly?, cardLabel?}],
-groups[{id, title, pins[]}], notes?[{heading, items[]}], overlays?[{id, title, x, y, pins[]}] }`
+groups[{id, title, pins[]}], zones?[{id, label, x, y, group?}], notes?[{heading, items[]}] }`
 `imageWidth`/`imageHeight` are the source image's pixel dimensions — record them when
 adding a boss (they drive the missing-image fallback's shape; pin x/y stay as %).
 Role `key` must map to a `--<key>-role` CSS var in `globals.css`
@@ -120,6 +120,21 @@ Optional pin fields (all additive — absent on normal pins, so older bosses are
   with a thin leader line back to a dot at the true position (accuracy preserved). Re-tuned *much*
   smaller than the old wide-label fan-out — a dot + 2-char badge needs only a fraction of the nudge.
   (`noLeader` is currently ignored — the leader is always drawn for an offset marker.)
+
+Optional **boss-level** field (alongside `pins`/`groups`):
+
+- **`zones`** (Lady Vashj) — `[{ id, label, x, y, group? }]`. Named arena areas (e.g. the Vashj P2
+  quadrants A–D) rendered as **large faint watermark letters** at their `x`/`y` centroid (% of
+  image), layered **above the image but below the markers** (z-index 1 vs. 2) so they never cover a
+  pin, and `aria-hidden` (the roster group headings name each area for AT). They appear in **both**
+  export modes (part of the captured node). `group` links a letter to a `groups` id: hovering/tapping
+  the letter **or** that linked group's roster header highlights all of the quadrant's markers
+  (quieter static ring, distinct from a single-marker tap pulse) and emphasizes the letter — reuses
+  the marker-highlight infra. Optional/additive: bosses without `zones` are unaffected, and a group
+  header only becomes an interactive highlight trigger when a zone links to it. Centroids are
+  **geometry-derived + overlay-verified** (Vashj's are the four red-divider wedge bisectors at ~0.55
+  of the platform radius), never eyeballed. Tinting the actual quadrant *area* is a later
+  nice-to-have (needs per-quadrant region geometry).
 
 ### Single-representation map + key badges (2026-06-22 v2 redesign)
 Per `MAP_PANEL_REDESIGN_HANDOFF.md` (v2): exactly **one** representation of a pin on the map (a
@@ -252,6 +267,19 @@ Severity reflects impact on the weekly officer workflow. P0 = do before mass-pro
   bosses (pin tags/name text were bumped up for this reason).
 
 ## 7. Changelog
+- **2026-06-23** — **Zone / quadrant watermark letters (`zones`).** Added an optional boss-level
+  `zones?: [{ id, label, x, y, group? }]` field (contract §3). Each renders as a large faint
+  watermark letter at its centroid, layered above the image but below the markers (new `.zoneLayer`
+  z-index 1) and inside the captured node so it shows in **both** export modes; `aria-hidden` (the
+  roster group headers name each area for AT). Reused the marker-highlight infra for a quadrant link:
+  hover/tap a zone letter **or** its linked roster group header (now an interactive button, only for
+  groups a zone points at — bosses without `zones` are untouched) highlights all that quadrant's
+  markers with a quiet static ring (distinct from the single-tap pulse) and emphasizes the letter.
+  Applied to **Lady Vashj** — zones A/B/C/D at the four red-divider wedge bisectors (~0.55 platform
+  radius), centroids geometry-derived and verified against `lady-vashj.jpg` with a rendered `sharp`
+  overlay (not eyeballed). Also dropped the already-removed `overlays?` from the §3 shape. Build +
+  lint pass; dev SSR verified (4 letters + 4 linked headers). **Pending the user's in-browser sign-off
+  before deploy** (raid tonight — not pushed to production yet).
 - **2026-06-22** — **Marker decluttering (v2 follow-up).** At true positions the markers in dense
   fights overlapped (Karathress's Tidalvess sat under Melee + T2). Per the handoff's new "Crowded
   markers" section, **repurposed `labelDx`/`labelDy` as marker offsets**: an offset nudges the marker

@@ -71,6 +71,30 @@ council cluster) still overlap. Handle it with **manual per-pin offsets**, not a
 - A11y: rows and markers focusable; Enter/Space toggles, Esc clears; express the active link with
   `aria-current`/`aria-selected`; respect `prefers-reduced-motion`.
 
+## Zone / quadrant labels (e.g. Lady Vashj A/B/C/D)
+Some bosses divide the arena into named areas (Vashj P2 quadrants A–D). Those areas currently have
+no on-map label, so the user can't tell which quadrant is which without cross-referencing the panel.
+Add an optional, reusable **`zones`** field on the boss object:
+
+`zones?: [{ id, label, x, y, group? }]` — `label` is the text (e.g. "A"), `x`/`y` the centroid in
+image %, `group` the matching `groups` id (optional, for the highlight link).
+
+- **Render each as a large, faint watermark letter** centered at its `x`/`y` — roughly 40–60px,
+  ~25–35% opacity, neutral white/grey so it doesn't fight the red dividing lines or role-colored
+  markers. Layer it **above the image but below the markers** (z-index between them) and mark it
+  `aria-hidden` (the panel grouping already names the area for AT).
+- **Must appear in BOTH export modes** — it's part of the map, so it's in the captured node.
+- **Highlight link (reuses the existing system):** hover/tap a zone letter *or* its panel group
+  header → highlight all markers whose `group` matches (and lightly emphasize the letter). This is
+  cheap because it reuses the marker-highlight infra. Tinting the actual quadrant **area** (a
+  translucent wedge) needs real region geometry per quadrant — treat that as a later nice-to-have,
+  not part of this pass.
+- **Backward compatible:** optional; bosses without `zones` are unaffected. Add `zones` to the
+  contract in `PROJECT_PLAN.md` §3 when implemented.
+- **Apply to Lady Vashj:** add zones A/B/C/D at the four quadrant centroids (place via a rendered
+  overlay against `lady-vashj.jpg`, same as pin verification — don't eyeball), each linked to its
+  quadrant `group`.
+
 ## Export (selectable, with a default)
 - **Default — map + key:** export the clean marker map **and** the assignment rows (badge + role +
   name) composed into **one** image (key beside the map on wide aspect, stacked under on tall).

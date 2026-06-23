@@ -59,6 +59,45 @@
   height: auto;
 }
 
+/* ---- Zone layer: faint watermark letters for named arena areas ------------ */
+/* Sits ABOVE the image but BELOW the marker layer (z-index 1 vs. 2), so the
+   letters never cover a marker. Part of the captured node → shows in both
+   export modes. Container ignores pointer events; each letter re-enables them
+   so it can drive the quadrant highlight. */
+.zoneLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.zoneLabel {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: Arial, sans-serif;
+  font-weight: 800;
+  font-size: 52px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.3);
+  text-shadow: 0 2px 9px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.02em;
+  user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color 0.14s ease, transform 0.14s ease, text-shadow 0.14s ease;
+}
+/* Emphasized when its quadrant is highlighted (its own hover/tap, or the
+   matching roster group header). */
+.zoneLabelActive {
+  color: rgba(255, 255, 255, 0.72);
+  transform: translate(-50%, -50%) scale(1.08);
+  text-shadow: 0 0 16px rgba(95, 217, 122, 0.55), 0 2px 9px rgba(0, 0, 0, 0.55);
+}
+@media (hover: hover) {
+  .zoneLabel:hover {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
 /* ---- Marker layer: the SINGLE on-map representation of a pin --------------- */
 .markerLayer {
   position: absolute;
@@ -160,6 +199,14 @@
   50% {
     box-shadow: 0 0 0 6px rgba(95, 217, 122, 0.16), 0 2px 9px rgba(0, 0, 0, 0.65);
   }
+}
+
+/* Quieter, static emphasis (no pulse) for every marker in a highlighted
+   quadrant — distinguishes a whole-group highlight from a single-marker tap. */
+.markerGroupActive {
+  transform: translate(-50%, -50%) scale(1.1);
+  z-index: 5;
+  box-shadow: 0 0 0 2px rgba(95, 217, 122, 0.45), 0 2px 9px rgba(0, 0, 0, 0.65);
 }
 
 /* ---- Export-only name layer (names-on-map export mode) -------------------- */
@@ -420,6 +467,36 @@
   margin-bottom: 6px;
   letter-spacing: 0.03em;
 }
+/* Group headers that link to a zone letter are buttons (tap/hover to highlight
+   the quadrant's markers). Reset the button chrome to read like the title. */
+.quadTitleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 1px 5px;
+  margin-left: -5px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.quadTitleBtn::after {
+  content: "◎";
+  font-size: 0.7em;
+  color: var(--text-dim);
+}
+.quadTitleBtn:hover {
+  background: rgba(95, 217, 122, 0.1);
+}
+.quadTitleActive {
+  background: var(--accent-fel-dim);
+  color: var(--accent-fel);
+}
+.quadTitleActive::after {
+  color: var(--accent-fel);
+}
 
 /* Export-style segmented control. */
 .exportRow {
@@ -613,6 +690,12 @@
   }
   .markerBadge {
     font-size: 12px;
+  }
+
+  /* The map shrinks on phones; scale the watermark letters down so they stay a
+     quadrant accent rather than dominating the plate. */
+  .zoneLabel {
+    font-size: 40px;
   }
 }
 
